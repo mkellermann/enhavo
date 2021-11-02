@@ -8,6 +8,10 @@ services:
         arguments:
             - '@event_dispatcher'
 
+    Enhavo\Bundle\NewsletterBundle\Client\MailjetClient:
+        arguments:
+            - '@event_dispatcher'
+
     Enhavo\Bundle\NewsletterBundle\Validator\Constraints\SubscriberExistsValidator:
         class: Enhavo\Bundle\NewsletterBundle\Validator\Constraints\SubscriberExistsValidator
         arguments:
@@ -119,8 +123,8 @@ services:
     Enhavo\Bundle\NewsletterBundle\Subscription\SubscriptionManager:
         public: true
         arguments:
-            - '@Enhavo\Component\Type\FactoryInterface[Storage]'
-            - '@Enhavo\Component\Type\FactoryInterface[Strategy]'
+            - '@Enhavo\Component\Type\FactoryInterface[NewsletterStorage]'
+            - '@Enhavo\Component\Type\FactoryInterface[NewsletterStrategy]'
             - '@form.factory'
             - '@event_dispatcher'
             - '%enhavo_newsletter.subscription%'
@@ -147,3 +151,10 @@ services:
     Enhavo\Bundle\NewsletterBundle\Provider\GroupProvider:
         arguments:
             - '%enhavo_newsletter.newsletter.test_receiver%'
+
+    Enhavo\Bundle\NewsletterBundle\EventListener\NewsletterSubscriber:
+        class:
+        arguments:
+            - '@Enhavo\Bundle\NewsletterBundle\Newsletter\NewsletterManager'
+        tags:
+            - { name: kernel.event_subscriber }

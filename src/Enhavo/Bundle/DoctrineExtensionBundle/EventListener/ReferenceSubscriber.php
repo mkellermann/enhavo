@@ -11,6 +11,7 @@ namespace Enhavo\Bundle\DoctrineExtensionBundle\EventListener;
 
 use Doctrine\Common\EventSubscriber;
 use Doctrine\Common\Persistence\Event\LifecycleEventArgs;
+use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Event\PostFlushEventArgs;
 use Doctrine\ORM\Event\PreFlushEventArgs;
 use Doctrine\ORM\Events;
@@ -49,7 +50,7 @@ class ReferenceSubscriber implements EventSubscriber
     {
         /** @var Metadata $metadata */
         $metadata = $this->metadataRepository->getMetadata($object);
-        if($metadata === null) {
+        if ($metadata === null) {
             return null;
         }
         return $metadata;
@@ -62,8 +63,8 @@ class ReferenceSubscriber implements EventSubscriber
     {
         $data = [];
         /** @var Metadata $metadata */
-        foreach($this->metadataRepository->getAllMetadata() as $metadata) {
-            if(count($metadata->getReferences()) > 0 && !in_array($metadata, $data)) {
+        foreach ($this->metadataRepository->getAllMetadata() as $metadata) {
+            if (count($metadata->getReferences()) > 0 && !in_array($metadata, $data)) {
                 $data[] = $metadata;
             }
         }
@@ -75,11 +76,11 @@ class ReferenceSubscriber implements EventSubscriber
      */
     public function getSubscribedEvents()
     {
-        return array(
+        return [
             Events::postLoad,
             Events::preFlush,
             Events::postFlush,
-        );
+        ];
     }
 
     /**
@@ -96,8 +97,8 @@ class ReferenceSubscriber implements EventSubscriber
             return;
         }
 
-        if(get_class($object) === $metadata->getClassName() || $this->isParentClass($object, $metadata->getClassName())) {
-            foreach($metadata->getReferences() as $reference) {
+        if (get_class($object) === $metadata->getClassName() || $this->isParentClass($object, $metadata->getClassName())) {
+            foreach ($metadata->getReferences() as $reference) {
                 $this->loadEntity($reference, $object);
             }
         }
@@ -106,9 +107,9 @@ class ReferenceSubscriber implements EventSubscriber
     private function isParentClass($object, $class)
     {
         $parentClass = get_parent_class($object);
-        if($parentClass === false) {
+        if ($parentClass === false) {
             return false;
-        } elseif($parentClass === $class) {
+        } elseif ($parentClass === $class) {
             return true;
         } else {
             return $this->isParentClass($parentClass, $class);
@@ -121,71 +122,96 @@ class ReferenceSubscriber implements EventSubscriber
         $id = $propertyAccessor->getValue($entity, $reference->getIdField());
         $class = $propertyAccessor->getValue($entity, $reference->getNameField());
 
-        if($id && $class) {
+        if ($id && $class) {
             $targetEntity = $this->entityResolver->getEntity($id, $class);
-            if($targetEntity !== null) {
+            if ($targetEntity !== null) {
                 $propertyAccessor->setValue($entity, $reference->getProperty(), $targetEntity);
             }
         }
     }
 
     /**
-     * Update entity before flush to prevent a possible after flush
+     * Update entity before flush to prevent possible changes after flush
      *
      * @param PreFlushEventArgs $args
      */
     public function preFlush(PreFlushEventArgs $args)
     {
         $uow = $args->getEntityManager()->getUnitOfWork();
-        $result = $uow->getIdentityMap();
+        $em = $args->getEntityManager();
+        $identityMap = $uow->getIdentityMap();
 
-        foreach($this->getAllMetadata() as $metadata) {
-            if(isset($result[$metadata->getClassName()])) {
-                foreach ($result[$metadata->getClassName()] as $entity) {
-                    foreach($metadata->getReferences() as $reference) {
+        foreach ($this->getAllMetadata() as $metadata) {
+            if (isset($identityMap[$metadata->getClassName()])) {
+                foreach ($identityMap[$metadata->getClassName()] as $entity) {
+                    foreach ($metadata->getReferences() as $reference) {
                         $this->updateEntity($reference, $entity);
+                        $this->updatePersist($reference, $entity, $em);
                     }
+                }
+            }
 
+            foreach ($uow->getScheduledEntityInsertions() as $entity) {
+                if (get_class($entity) === $metadata->getClassName()) {
+                    foreach ($metadata->getReferences() as $reference) {
+                        $this->updateEntity($reference, $entity);
+                        $this->updatePersist($reference, $entity, $em);
+                    }
                 }
             }
         }
     }
 
+    private function updatePersist(Reference $reference, $entity, EntityManagerInterface $em)
+    {
+        $propertyAccessor = PropertyAccess::createPropertyAccessor();
+        $targetProperty = $propertyAccessor->getValue($entity, $reference->getProperty());
+
+        if ($targetProperty && $em->getUnitOfWork()->getEntityState($targetProperty) !== UnitOfWork::STATE_MANAGED) {
+            $em->persist($targetProperty);
+        }
+    }
+
     /**
-     * Check if entity is not up to date an trigger flush again if needed
+     * Check if entity is not up to date and execute changes
      *
      * @param PostFlushEventArgs $args
      */
     public function postFlush(PostFlushEventArgs $args)
     {
-        $change = false;
+        $persist = false;
+        $changes = [];
 
         $em = $args->getEntityManager();
         $uow = $args->getEntityManager()->getUnitOfWork();
         $result = $uow->getIdentityMap();
 
-        foreach($this->getAllMetadata() as $metadata) {
-            if(isset($result[$metadata->getClassName()])) {
+        foreach ($this->getAllMetadata() as $metadata) {
+            if (isset($result[$metadata->getClassName()])) {
                 foreach ($result[$metadata->getClassName()] as $entity) {
-                    foreach($metadata->getReferences() as $reference) {
-                        $updated = $this->updateEntity($reference, $entity);
-                        if($updated) {
-                            $change = true;
+                    foreach ($metadata->getReferences() as $reference) {
+                        $entityChanges = $this->updateEntity($reference, $entity);
+                        foreach ($entityChanges as $entityChange) {
+                            $changes[] = $entityChange;
                         }
 
                         $propertyAccessor = PropertyAccess::createPropertyAccessor();
                         $targetProperty = $propertyAccessor->getValue($entity, $reference->getProperty());
 
-                        if($targetProperty && $uow->getEntityState($targetProperty) !== UnitOfWork::STATE_MANAGED) {
+                        if ($targetProperty && $uow->getEntityState($targetProperty) !== UnitOfWork::STATE_MANAGED) {
                             $em->persist($targetProperty);
-                            $change = true;
+                            $persist = true;
                         }
                     }
                 }
             }
         }
 
-        if($change) {
+        if (count($changes)) {
+            $this->executeChanges($changes, $args->getEntityManager());
+        }
+
+        if ($persist) {
             $em->flush();
         }
     }
@@ -195,49 +221,83 @@ class ReferenceSubscriber implements EventSubscriber
      *
      * @param Reference $reference
      * @param object $entity
-     * @return boolean
+     * @return ReferenceChange[]
      */
     private function updateEntity(Reference $reference, $entity)
     {
-        $change = false;
+        $changes = [];
 
         $propertyAccessor = PropertyAccess::createPropertyAccessor();
         $targetProperty = $propertyAccessor->getValue($entity, $reference->getProperty());
 
         // if entity state is still proxy, we try to load its entity to make sure that target property is correct
-        if($entity instanceof Proxy && $targetProperty === null) {
+        if ($entity instanceof Proxy && $targetProperty === null) {
             $this->loadEntity($reference, $entity);
             $targetProperty = $propertyAccessor->getValue($entity, $reference->getProperty());
         }
 
-        if($targetProperty) {
+        if ($targetProperty) {
             // update id property
             $idProperty = $propertyAccessor->getValue($entity, $reference->getIdField());
             $id = $propertyAccessor->getValue($targetProperty, 'id');
-            if($idProperty != $id) {
+            if ($idProperty != $id) {
                 $propertyAccessor->setValue($entity, $reference->getIdField(), $id);
-                $change = true;
+                $changes[] = new ReferenceChange($entity, $reference->getIdField(), $id);
             }
 
             // update class property
             $classProperty = $propertyAccessor->getValue($entity, $reference->getNameField());
             $class = $this->entityResolver->getName($targetProperty);
-            if($classProperty != $class) {
+            if ($classProperty != $class) {
                 $propertyAccessor->setValue($entity, $reference->getNameField(), $class);
-                $change = true;
+                $changes[] = new ReferenceChange($entity, $reference->getNameField(), $class);
             }
         } else {
-            if(null !== $propertyAccessor->getValue($entity, $reference->getIdField())) {
+            if (null !== $propertyAccessor->getValue($entity, $reference->getIdField())) {
                 $propertyAccessor->setValue($entity, $reference->getIdField(), null);
-                $change = true;
+                $changes[] = new ReferenceChange($entity, $reference->getIdField(), null);
             }
 
-            if(null !== $propertyAccessor->getValue($entity, $reference->getNameField())) {
+            if (null !== $propertyAccessor->getValue($entity, $reference->getNameField())) {
                 $propertyAccessor->setValue($entity, $reference->getNameField(), null);
-                $change = true;
+                $changes[] = new ReferenceChange($entity, $reference->getNameField(), null);
             }
         }
 
-        return $change;
+        return $changes;
+    }
+
+    /**
+     * @param ReferenceChange[] $changes
+     * @param EntityManagerInterface $em
+     */
+    private function executeChanges($changes, EntityManagerInterface $em)
+    {
+        $queries = [];
+        $entities = [];
+        foreach ($changes as $change) {
+            $query = $em->createQueryBuilder()
+                ->update(get_class($change->getEntity()), 'e')
+                ->set(sprintf('e.%s', $change->getProperty()), ':value')
+                ->where('e.id = :id')
+                ->setParameter('value', $change->getValue())
+                ->setParameter('id', $change->getEntity()->getId())
+                ->getQuery()
+            ;
+
+            $queries[] = $query;
+
+            if (!in_array($change->getEntity(), $entities)) {
+                $entities[] = $change->getEntity();
+            }
+        }
+
+        foreach ($queries as $query) {
+            $query->execute();
+        }
+
+        foreach ($entities as $entity) {
+            $em->refresh($entity);
+        }
     }
 }

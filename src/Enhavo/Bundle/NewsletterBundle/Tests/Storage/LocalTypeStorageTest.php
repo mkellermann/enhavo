@@ -199,12 +199,6 @@ class LocalTypeStorageTest extends TestCase
             'groups' => []
         ]);
 
-//        $storage = $this->createInstance(new LocalStorageType($dependencies->entityManager, $dependencies->subscriberRepository, $dependencies->groupRepository, $dependencies->subscriberFactory), [new StorageType()], [
-//            'groups' => [
-//                'local'
-//            ]
-//        ]);
-
         $subscriber = new Subscriber();
         $subscriber->setEmail('to@enhavo.com');
         $subscriber->setSubscription('missing');
@@ -336,6 +330,16 @@ class NotNewsletter implements NewsletterInterface
     }
 
     public function setFinishAt(?\DateTime $finishAt): void
+    {
+
+    }
+
+    public function getCreatedAt(): ?\DateTime
+    {
+
+    }
+
+    public function setCreatedAt(?\DateTime $createdAt): void
     {
 
     }

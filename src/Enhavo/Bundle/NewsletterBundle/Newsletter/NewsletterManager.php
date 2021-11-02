@@ -173,6 +173,8 @@ class NewsletterManager
             'receiver' => $receiver,
         ], 'text/html');
 
+        $message->setContent($this->render($receiver));
+
         if (!empty($receiver->getNewsletter()->getAttachments())) {
             $this->addAttachmentsToMessage($receiver->getNewsletter()->getAttachments(), $message);
         }
@@ -258,5 +260,12 @@ class NewsletterManager
             throw new \Exception(sprintf('No template found for key "%s"', $key));
         }
         return $this->templates[$key]['template'];
+    }
+
+    public function update(NewsletterInterface $newsletter)
+    {
+        if ($newsletter->getCreatedAt() === null) {
+            $newsletter->setCreatedAt(new \DateTime());
+        }
     }
 }
