@@ -2,6 +2,7 @@
 
 namespace Enhavo\Bundle\ContentBundle\DependencyInjection;
 
+use Enhavo\Bundle\ContentBundle\Video\YoutubeProvider;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 
@@ -27,6 +28,27 @@ class Configuration implements ConfigurationInterface
                         ->arrayNode('collectors')
                             ->useAttributeAsKey('name')
                             ->prototype('variable')->end()
+                        ->end()
+                    ->end()
+                ->end()
+            ->end()
+
+            ->children()
+                ->arrayNode('video')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->arrayNode('youtube')
+                            ->addDefaultsIfNotSet()
+                            ->children()
+                                ->scalarNode('api_key')->defaultValue(null)->end()
+                                ->scalarNode('image_type')->defaultValue(YoutubeProvider::IMAGE_TYPE_MAX_RESOLUTION)->end()
+                            ->end()
+                        ->end()
+                        ->arrayNode('vimeo')
+                            ->addDefaultsIfNotSet()
+                            ->children()
+                                ->scalarNode('api_key')->defaultValue(null)->end()
+                            ->end()
                         ->end()
                     ->end()
                 ->end()
