@@ -1,18 +1,11 @@
 services:
-    Enhavo\Bundle\BlockBundle\Twig\TwigExtension:
+    Enhavo\Bundle\BlockBundle\Twig\BlockTwigExtension:
         arguments:
-            - '@Enhavo\Bundle\BlockBundle\Renderer\BlockRenderer'
+            - '%enhavo_block.render.sets%'
         calls:
-            - [ setContainer, ['@service_container']]
+            - [setTwig, ['@twig']]
         tags:
             - { name: twig.extension }
-
-    Enhavo\Bundle\BlockBundle\Renderer\BlockRenderer:
-        arguments:
-            - '@Enhavo\Bundle\BlockBundle\Block\BlockManager'
-            - '%enhavo_block.render.sets%'
-            - '@enhavo_app.template.manager'
-            - '@twig'
 
     validator.video_url_validator:
         class:  Enhavo\Bundle\BlockBundle\Validator\Constraints\VideoUrlValidator
@@ -26,7 +19,7 @@ services:
             - '@Enhavo\Bundle\BlockBundle\Block\Cleaner'
             - '%enhavo_block.blocks%'
         calls:
-            - ['setContainer', ['@service_container']]
+            - [setContainer, ['@service_container']]
 
     Enhavo\Bundle\BlockBundle\Block\Cleaner:
         arguments:
@@ -34,3 +27,10 @@ services:
             - '@Enhavo\Bundle\DoctrineExtensionBundle\Util\AssociationFinder'
         calls:
             - ['setBlockManager', ['@Enhavo\Bundle\BlockBundle\Block\BlockManager']]
+
+    Enhavo\Bundle\BlockBundle\Normalizer\NodeDataNormalizer:
+        arguments:
+            - '@Enhavo\Bundle\BlockBundle\Block\BlockManager'
+            - '@Enhavo\Bundle\AppBundle\Template\TemplateResolverInterface'
+        tags:
+            - { name: enhavo_api.data_normalizer }

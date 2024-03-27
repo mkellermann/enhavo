@@ -9,69 +9,27 @@
 namespace Enhavo\Bundle\ShopBundle\Entity;
 
 use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
-use Enhavo\Bundle\MediaBundle\Model\FileInterface;
+use Enhavo\Bundle\ShopBundle\Model\ProductAccessTrait;
+use Enhavo\Bundle\ShopBundle\Model\ProductVariantInterface;
+use Enhavo\Bundle\ShopBundle\Model\StockAccessInterface;
 use Sylius\Component\Product\Model\ProductVariant as SyliusProductVariant;
-use Sylius\Component\Shipping\Model\ShippingCategoryInterface;
-use Sylius\Component\Taxation\Model\TaxRateInterface;
-use Sylius\Component\Product\Model\ProductVariantInterface;
 
-class ProductVariant extends SyliusProductVariant
+class ProductVariant extends SyliusProductVariant implements ProductVariantInterface, StockAccessInterface
 {
-    /** @var boolean */
-    private $active = true;
+    use ProductAccessTrait;
 
-    /** @var string */
-    private $title;
+    private ?int $stock = null;
+    private bool $stockTracked = false;
+    private ?bool $default = false;
+    private bool $index = false;
+    private ?string $slug = null;
+    private bool $overrideDescription = false;
+    private bool $overridePictures = false;
+    private bool $overridePrice = false;
+    private bool $overrideShipping = false;
+    private bool $overrideTaxCategory = false;
+    private bool $overrideDimensions = false;
 
-    /** @var FileInterface */
-    private $picture;
-
-    /** @var \Doctrine\Common\Collections\Collection */
-    private $pictures;
-
-    /** @var integer */
-    private $price;
-
-    /** @var integer */
-    private $reducedPrice;
-
-    /** @var boolean */
-    private $reduced;
-
-    /** @var ShippingCategoryInterface */
-    private $shippingCategory;
-
-    /** @var TaxRateInterface */
-    private $taxRate;
-
-    /** @var boolean */
-    private $shippingRequired;
-
-    /** @var integer */
-    private $stock;
-
-    /** @var boolean */
-    private $stockTracked = false;
-
-    /** @var integer */
-    private $height;
-
-    /** @var integer */
-    private $width;
-
-    /** @var integer */
-    private $depth;
-
-    /** @var integer */
-    private $volume;
-
-    /** @var integer */
-    private $weight;
-
-    /**
-     * ProductVariant constructor.
-     */
     public function __construct()
     {
         parent::__construct();
@@ -79,364 +37,123 @@ class ProductVariant extends SyliusProductVariant
         $this->pictures = new ArrayCollection();
     }
 
-    /**
-     * @return bool
-     */
-    public function isActive(): ?bool
+    public function getName(): ?string
     {
-        return $this->active;
+        return $this->getTitle();
     }
 
-    /**
-     * @param bool $active
-     * @return self
-     */
-    public function setActive(?bool $active): ProductVariantInterface
+    public function setName(?string $name): void
     {
-        $this->active = $active;
-
-        return $this;
+        $this->setTitle($name);
     }
 
-    /**
-     * @return mixed
-     */
-    public function getTitle()
-    {
-        return $this->title;
-    }
-
-    /**
-     * @param mixed $title
-     * @return self
-     */
-    public function setTitle($title): ProductVariantInterface
-    {
-        $this->title = $title;
-
-        return $this;
-    }
-
-    /**
-     * @return int
-     */
-    public function getHeight(): ?int
-    {
-        return $this->height;
-    }
-
-    /**
-     * @param int $height
-     * @return self
-     */
-    public function setHeight(?int $height): ProductVariantInterface
-    {
-        $this->height = $height;
-
-        return $this;
-    }
-
-    /**
-     * @return int
-     */
-    public function getDepth(): ?int
-    {
-        return $this->depth;
-    }
-
-    /**
-     * @param int $depth
-     * @return self
-     */
-    public function setDepth(?int $depth): ProductVariantInterface
-    {
-        $this->depth = $depth;
-
-        return $this;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isShippingRequired(): ?bool
-    {
-        return $this->shippingRequired;
-    }
-
-    /**
-     * @param bool $shippingRequired
-     * @return self
-     */
-    public function setShippingRequired(?bool $shippingRequired): ProductVariantInterface
-    {
-        $this->shippingRequired = $shippingRequired;
-
-        return $this;
-    }
-
-    /**
-     * @return int
-     */
-    public function getWidth(): ?int
-    {
-        return $this->width;
-    }
-
-    /**
-     * @param int $width
-     * @return self
-     */
-    public function setWidth(?int $width): ProductVariantInterface
-    {
-        $this->width = $width;
-
-        return $this;
-    }
-
-    /**
-     * @return int
-     */
-    public function getVolume(): ?int
-    {
-        return $this->volume;
-    }
-
-    /**
-     * @param int $volume
-     * @return self
-     */
-    public function setVolume(?int $volume): ProductVariantInterface
-    {
-        $this->volume = $volume;
-
-        return $this;
-    }
-
-    /**
-     * @return int
-     */
-    public function getWeight(): ?int
-    {
-        return $this->weight;
-    }
-
-    /**
-     * @param int $weight
-     * @return self
-     */
-    public function setWeight(?int $weight): ProductVariantInterface
-    {
-        $this->weight = $weight;
-
-        return $this;
-    }
-
-    /**
-     * Set taxRate
-     *
-     * @param TaxRateInterface $taxRate
-     * @return ProductVariant
-     */
-    public function setTaxRate(TaxRateInterface $taxRate = null): ProductVariantInterface
-    {
-        $this->taxRate = $taxRate;
-
-        return $this;
-    }
-
-    /**
-     * @return int
-     */
     public function getStock(): ?int
     {
         return $this->stock;
     }
 
-    /**
-     * @param int $stock
-     * @return self
-     */
-    public function setStock(int $stock): ProductVariantInterface
+    public function setStock(?int $stock): void
     {
         $this->stock = $stock;
-
-        return $this;
     }
 
-    /**
-     * @return bool
-     */
-    public function isReduced(): ?bool
-    {
-        return $this->reduced;
-    }
-
-    /**
-     * @param bool $reduced
-     * @return self
-     */
-    public function setReduced(?bool $reduced): ProductVariantInterface
-    {
-        $this->reduced = $reduced;
-
-        return $this;
-    }
-
-    /**
-     * @return int
-     */
-    public function getReducedPrice(): ?int
-    {
-        return $this->reducedPrice;
-    }
-
-    /**
-     * @param int $reducedPrice
-     * @return self
-     */
-    public function setReducedPrice(?int $reducedPrice): ProductVariantInterface
-    {
-        $this->reducedPrice = $reducedPrice;
-
-        return $this;
-    }
-
-    /**
-     * Get taxRate
-     *
-     * @return TaxRateInterface
-     */
-    public function getTaxRate(): ?TaxRateInterface
-    {
-        return $this->taxRate;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isStockTracked(): ?bool
+    public function isStockTracked(): bool
     {
         return $this->stockTracked;
     }
 
-    /**
-     * @param bool $stockTracked
-     * @return self
-     */
-    public function setStockTracked(bool $stockTracked): ProductVariantInterface
+    public function setStockTracked(bool $stockTracked): void
     {
         $this->stockTracked = $stockTracked;
-
-        return $this;
     }
 
-    /**
-     * @return ShippingCategoryInterface
-     */
-    public function getShippingCategory(): ?ShippingCategoryInterface
+    public function isDefault(): ?bool
     {
-        return $this->shippingCategory;
+        return $this->default;
     }
 
-    /**
-     * @param ShippingCategoryInterface $shippingCategory
-     * @return $this
-     */
-    public function setShippingCategory(ShippingCategoryInterface $shippingCategory): ProductVariantInterface // This method is not required.
+    public function setDefault(?bool $default): void
     {
-        $this->shippingCategory = $shippingCategory;
-
-        return $this;
+        $this->default = $default;
     }
 
-    /**
-     * Set price
-     *
-     * @param integer $price
-     *
-     * @return ProductVariant
-     */
-    public function setPrice($price): ProductVariantInterface
+    public function isIndex(): bool
     {
-        $this->price = $price;
-
-        return $this;
+        return $this->index;
     }
 
-    /**
-     * Get price
-     *
-     * @return integer
-     */
-    public function getPrice(): ?int
+    public function setIndex(?bool $index): void
     {
-        return $this->price;
+        $this->index = $index;
     }
 
-    /**
-     * Get TaxRate
-     *
-     * @return float
-     */
-    public function getTax(): ?float
+    public function isOverridePrice(): bool
     {
-        return intval($this->getPrice() * $this->getProduct()->getTaxRate()->getAmount());
+        return $this->overridePrice;
     }
 
-    public function getUnitPriceTotal()
+    public function setOverridePrice(bool $overridePrice): void
     {
-        return $this->getTax() + $this->getPrice();
+        $this->overridePrice = $overridePrice;
     }
 
-    /**
-     * @return FileInterface
-     */
-    public function getPicture(): ?FileInterface
+    public function isOverrideDescription(): bool
     {
-        return $this->picture;
+        return $this->overrideDescription;
     }
 
-    /**
-     * @param FileInterface $picture
-     * @return self
-     */
-    public function setPicture($picture): ProductVariantInterface
+    public function setOverrideDescription(bool $overrideDescription): void
     {
-        $this->picture = $picture;
-
-        return $this;
+        $this->overrideDescription = $overrideDescription;
     }
 
-    /**
-     * Add picture
-     *
-     * @param FileInterface $picture
-     * @return Product
-     */
-    public function addPicture(FileInterface $picture): ProductVariantInterface
+    public function isOverrideTaxCategory(): bool
     {
-        $this->pictures[] = $picture;
-
-        return $this;
+        return $this->overrideTaxCategory;
     }
 
-    /**
-     * Remove picture
-     *
-     * @param FileInterface $picture
-     */
-    public function removePicture(FileInterface $picture): void
+    public function setOverrideTaxCategory(bool $overrideTaxCategory): void
     {
-        $this->pictures->removeElement($picture);
+        $this->overrideTaxCategory = $overrideTaxCategory;
     }
 
-    /**
-     * Get pictures
-     *
-     * @return \Doctrine\Common\Collections\Collection
-     */
-    public function getPictures(): Collection
+    public function isOverrideDimensions(): bool
     {
-        return $this->pictures;
+        return $this->overrideDimensions;
+    }
+
+    public function setOverrideDimensions(bool $overrideDimensions): void
+    {
+        $this->overrideDimensions = $overrideDimensions;
+    }
+
+    public function isOverridePictures(): bool
+    {
+        return $this->overridePictures;
+    }
+
+    public function setOverridePictures(bool $overridePictures): void
+    {
+        $this->overridePictures = $overridePictures;
+    }
+
+    public function isOverrideShipping(): bool
+    {
+        return $this->overrideShipping;
+    }
+
+    public function setOverrideShipping(bool $overrideShipping): void
+    {
+        $this->overrideShipping = $overrideShipping;
+    }
+
+    public function getSlug(): ?string
+    {
+        return $this->slug;
+    }
+
+    public function setSlug(?string $slug): void
+    {
+        $this->slug = $slug;
     }
 }

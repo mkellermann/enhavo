@@ -11,17 +11,13 @@ namespace App\Controller;
 use App\Form\Type\PersonType;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
-/**
- * @package App\Controller
- * @Route("/person")
- */
+#[Route('/person')]
 class PersonController extends AbstractController
 {
-    /**
-     * @Route("/", name="app_theme_person_index")
-     */
+    #[Route('/', name: 'app_theme_person_index', condition: 'context.getResolver()')]
     public function indexAction(Request $request)
     {
         $form = $this->createForm(PersonType::class);
@@ -31,5 +27,12 @@ class PersonController extends AbstractController
         return $this->render('theme/person/index.html.twig', [
             'form' => $form->createView(),
         ]);
+    }
+
+    public function exportAction(Request $request)
+    {
+        $response = new Response(sprintf('Export Data (%s %s)', $request->get('from'), $request->get('to')));
+        $response->headers->set('Content-Disposition', 'attachment; filename="export.txt"');
+        return $response;
     }
 }

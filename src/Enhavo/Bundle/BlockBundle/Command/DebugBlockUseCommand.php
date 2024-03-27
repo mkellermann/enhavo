@@ -44,7 +44,7 @@ class DebugBlockUseCommand extends Command
     protected function configure()
     {
         $this
-            ->setName('debug:enhavo:block')
+            ->setName('debug:block')
             ->setDescription('Find root resource of all blocks, all blocks of one type or one specific block')
             ->addArgument('type', InputArgument::OPTIONAL, '(Optional) block type to search for')
             ->addArgument('id', InputArgument::OPTIONAL, '(Optional) id of specific block');
@@ -69,10 +69,12 @@ class DebugBlockUseCommand extends Command
             $this->logger->error(sprintf('Unknown block named "%s". Name must be a key registered under enhavo_block.blocks.', $type));
             $this->logger->info(sprintf('Registered blocks: %s', implode(', ', array_keys($this->blockConfig))));
             $this->logger->info('');
-            return;
+            return Command::FAILURE;
         }
 
         $this->find($type, $id);
+
+        return Command::SUCCESS;
     }
 
     private function find($type, $id)

@@ -13,25 +13,12 @@ namespace Enhavo\Bundle\BlockBundle\Maker\Generator;
 
 class PhpClassProperty
 {
-    /** @var string */
-    private $name;
-
-    /** @var string */
-    private $visibility = 'private';
-
-    /** @var array */
-    private $config;
-
-    /**
-     * @param string $name
-     * @param string $visibility
-     * @param array $config
-     */
-    public function __construct(string $name, string $visibility, array $config)
+    public function __construct(
+        private string $name,
+        private string $visibility,
+        private array  $config,
+    )
     {
-        $this->name = $name;
-        $this->visibility = $visibility;
-        $this->config = $config;
     }
 
     public function getInitializer(): ?string
@@ -39,10 +26,37 @@ class PhpClassProperty
         return $this->config['initializer'] ?? null;
     }
 
+    public function hasSerializationGroups(): bool
+    {
+        $groups = $this->getSerializationGroups();
+
+         return count($groups) > 0;
+    }
+
+    public function getSerializationGroups(): array
+    {
+        return $this->config['serialization_groups'] ?? ['endpoint.block'];
+    }
+
+    public function getSerializationGroupsString(): string
+    {
+        return sprintf("'%s'", implode("', '", $this->getSerializationGroups()));
+    }
+
     public function getNullable(): string
     {
         return (isset($this->config['nullable']) && $this->config['nullable'])
             ? '?' : '';
+    }
+
+    public function getAllowGetter(): bool
+    {
+        return !isset($this->config['allow_getter']) || $this->config['allow_getter'];
+    }
+
+    public function getAllowSetter(): bool
+    {
+        return !isset($this->config['allow_setter']) || $this->config['allow_setter'];
     }
 
     /**
@@ -60,7 +74,7 @@ class PhpClassProperty
 
     public function getRemover(): string
     {
-        return $this->config['type_options']['remover'] ?? 'remove';
+        return $this->config['type_options']['remover'] ?? 'removeElement';
     }
 
     public function getSingular(): ?string
@@ -91,11 +105,6 @@ class PhpClassProperty
     public function getType(): ?string
     {
         return $this->config['type'] ?? null;
-    }
-
-    public function getTypeOptions(): ?array
-    {
-        return $this->config['type_options'] ?? null;
     }
 
     public function getTypeOption(string $key): ?array

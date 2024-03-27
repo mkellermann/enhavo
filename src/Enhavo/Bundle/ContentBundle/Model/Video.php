@@ -4,24 +4,6 @@ namespace Enhavo\Bundle\ContentBundle\Model;
 
 class Video
 {
-    /** @var string */
-    private $provider;
-
-    /** @var string */
-    private $title;
-
-    /** @var string */
-    private $description;
-
-    /** @var string */
-    private $thumbnail;
-
-    /** @var string */
-    private $videoUrl;
-
-    /** @var string */
-    private $embedUrl;
-
     /**
      * @param string $provider
      * @param string $title
@@ -30,14 +12,15 @@ class Video
      * @param string $videoUrl
      * @param string $embedUrl
      */
-    public function __construct(string $provider, string $title, string $description, string $thumbnail, string $videoUrl, string $embedUrl)
+    public function __construct(
+        private string $provider,
+        private string $title,
+        private string $description,
+        private string $thumbnail,
+        private string $videoUrl,
+        private string $embedUrl,
+    )
     {
-        $this->provider = $provider;
-        $this->title = $title;
-        $this->description = $description;
-        $this->thumbnail = $thumbnail;
-        $this->videoUrl = $videoUrl;
-        $this->embedUrl = $embedUrl;
     }
 
     /**
@@ -87,4 +70,5 @@ class Video
     {
         return $this->embedUrl;
     }
+
 }

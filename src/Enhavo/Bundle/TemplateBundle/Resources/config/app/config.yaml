@@ -2,6 +2,7 @@ enhavo_app:
     template_paths:
         enhavo_template:
             path: '@EnhavoTemplateBundle/Resources/views'
+            alias: EnhavoTemplate
             priority: 10
     roles:
         enhavo_template_template_index:
@@ -27,14 +28,16 @@ enhavo_routing:
             router:
                 default:
                     type: routable
-                admin:
+                view:
                     type: id
                     route: enhavo_template_template_update
-            generators:
-                route_name:
-                    type: route_name
+                admin:
+                    type: admin
+                    index_route: enhavo_template_template_index
+                    update_route: enhavo_template_template_update
+
 
 cmf_routing:
     dynamic:
         controllers_by_class:
-            Enhavo\Bundle\TemplateBundle\Entity\Template: Enhavo\Bundle\TemplateBundle\Controller\TemplateController:showResourceAction
+            Enhavo\Bundle\TemplateBundle\Entity\Template: Enhavo\Bundle\TemplateBundle\Controller\TemplateController::showResourceAction

@@ -6,6 +6,11 @@ services:
         autowire: false
         autoconfigure: false
 
+    App\:
+        resource: '../src/App'
+        autowire: true
+        autoconfigure: true
+
     app.multi-tenancy.provider:
         class: Enhavo\Bundle\MultiTenancyBundle\Provider\ConfigurationProvider
         arguments:

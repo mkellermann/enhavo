@@ -13,20 +13,11 @@ namespace Enhavo\Bundle\BlockBundle\Maker\Generator;
 
 class DoctrineOrmField
 {
-    /** @var string */
-    private $name;
-
-    /** @var array */
-    private $config;
-
-    /**
-     * @param string $name
-     * @param array $config
-     */
-    public function __construct(string $name, array $config)
+    public function __construct(
+        private string $name,
+        private array $config
+    )
     {
-        $this->name = $name;
-        $this->config = $config;
     }
 
     public function getNullable(): bool
@@ -42,6 +33,25 @@ class DoctrineOrmField
     public function getType(): ?string
     {
         return $this->config['orm_type'] ?? $this->config['type'] ?? null;
+    }
+
+    public function getOrmType(): ?string
+    {
+        if (isset($this->config['orm_type']) && false === $this->config['orm_type']) {
+            return null;
+        }
+
+        return $this->getType();
+    }
+
+    public function getGeneratedValueType(): ?string
+    {
+        return isset($this->config['orm_generated_value_type']) ? strtoupper($this->config['orm_generated_value_type']) : null;
+    }
+
+    public function isPrimaryKey(): bool
+    {
+        return $this->config['orm_primary_key'] ?? false;
     }
 
     public function getName(): string

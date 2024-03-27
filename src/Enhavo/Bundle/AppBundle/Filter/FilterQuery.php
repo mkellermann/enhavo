@@ -24,6 +24,7 @@ class FilterQuery
     const OPERATOR_LIKE = 'like';
     const OPERATOR_START_LIKE = 'start_like';
     const OPERATOR_END_LIKE = 'end_like';
+    const OPERATOR_IN = 'in';
 
     const ORDER_ASC = 'asc';
     const ORDER_DESC = 'desc';
@@ -70,6 +71,11 @@ class FilterQuery
      */
     private $hydrate;
 
+    /**
+     * @var bool
+     */
+    private $paginated = true;
+
     public function __construct(EntityManagerInterface $em, $class, $alias = 'a')
     {
         if(strlen($alias) != 1) {
@@ -80,6 +86,7 @@ class FilterQuery
         $this->queryBuilder = new QueryBuilder($em);
         $this->queryBuilder->select($this->getAlias());
         $this->queryBuilder->from($class, $this->getAlias());
+        $this->queryBuilder->addGroupBy($this->alias . '.id');
     }
 
     public function addOrderBy($property, $order, $joinProperty = null)
@@ -311,6 +318,8 @@ class FilterQuery
             case(FilterQuery::OPERATOR_START_LIKE):
             case(FilterQuery::OPERATOR_END_LIKE):
                 return 'like';
+            case(FilterQuery::OPERATOR_IN):
+                return 'in';
         }
         throw new FilterException('Operator not supported in Repository');
     }
@@ -318,8 +327,11 @@ class FilterQuery
     private function getParameter($where, $number)
     {
         $value = $where['value'];
-        if(FilterQuery::OPERATOR_EQUALS && $value === null) {
+        if($where['operator'] === FilterQuery::OPERATOR_EQUALS && $value === null) {
             return 'null';
+        }
+        if($where['operator'] === FilterQuery::OPERATOR_IN) {
+            return '(:' . $this->getParameterName($number) . ')';
         }
         return ':' . $this->getParameterName($number);
     }
@@ -357,5 +369,21 @@ class FilterQuery
     public function setHydrate(string $hydrate): void
     {
         $this->hydrate = $hydrate;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isPaginated(): bool
+    {
+        return $this->paginated;
+    }
+
+    /**
+     * @param bool $paginated
+     */
+    public function setPaginated(bool $paginated): void
+    {
+        $this->paginated = $paginated;
     }
 }

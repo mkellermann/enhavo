@@ -4,6 +4,8 @@ namespace Enhavo\Bundle\UserBundle\Controller;
 
 use Enhavo\Bundle\FormBundle\Error\FormErrorResolver;
 use Enhavo\Bundle\UserBundle\Configuration\ConfigurationProvider;
+use Enhavo\Bundle\UserBundle\Exception\ConfigurationException;
+use Enhavo\Bundle\UserBundle\Exception\TokenInvalidException;
 use Enhavo\Bundle\UserBundle\Model\UserInterface;
 use Enhavo\Bundle\UserBundle\Repository\UserRepository;
 use Enhavo\Bundle\UserBundle\User\UserManager;
@@ -11,23 +13,17 @@ use Sylius\Component\Resource\Factory\FactoryInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Class RegistrationController
  * @package Enhavo\Bundle\UserBundle\Controller
- *
  */
 class RegistrationController extends AbstractUserController
 {
-    /** @var UserRepository */
-    private $userRepository;
-
-    /** @var FactoryInterface */
-    private $userFactory;
-
-    /** @var FormErrorResolver */
-    private $errorResolver;
+    private UserRepository $userRepository;
+    private FactoryInterface $userFactory;
+    private FormErrorResolver $errorResolver;
 
     /**
      * RegistrationController constructor.
@@ -46,10 +42,12 @@ class RegistrationController extends AbstractUserController
         $this->errorResolver = $errorResolver;
     }
 
-    public function registerAction(Request $request)
+    /**
+     * @throws ConfigurationException
+     */
+    public function registerAction(Request $request): RedirectResponse|JsonResponse|Response
     {
-        $configKey = $this->getConfigKey($request);
-        $configuration = $this->provider->getRegistrationRegisterConfiguration($configKey);
+        $configuration = $this->provider->getRegistrationRegisterConfiguration();
 
         /** @var UserInterface $user */
         $user = $this->userFactory->createNew();
@@ -96,7 +94,7 @@ class RegistrationController extends AbstractUserController
             }
         }
 
-        $response = $this->render($this->getTemplate($configuration->getTemplate()), [
+        $response = $this->render($this->resolveTemplate($configuration->getTemplate()), [
             'form' => $form->createView(),
         ]);
 
@@ -107,23 +105,27 @@ class RegistrationController extends AbstractUserController
         return $response;
     }
 
-    public function checkAction(Request $request)
+    /**
+     * @throws ConfigurationException
+     */
+    public function checkAction(Request $request): Response
     {
-        $configKey = $this->getConfigKey($request);
-        $configuration = $this->provider->getRegistrationCheckConfiguration($configKey);
+        $configuration = $this->provider->getRegistrationCheckConfiguration();
 
-        return $this->render($this->getTemplate($configuration->getTemplate()));
+        return $this->render($this->resolveTemplate($configuration->getTemplate()));
     }
 
-    public function confirmAction(Request $request, $token)
+    /**
+     * @throws ConfigurationException
+     */
+    public function confirmAction(Request $request, $token): RedirectResponse
     {
-        $configKey = $this->getConfigKey($request);
-        $configuration = $this->provider->getRegistrationConfirmConfiguration($configKey);
+        $configuration = $this->provider->getRegistrationConfirmConfiguration();
 
         $user = $this->userRepository->findByConfirmationToken($token);
 
         if (null === $user) {
-            throw new NotFoundHttpException(sprintf('A user with confirmation token "%s" does not exist', $token));
+            throw new TokenInvalidException(sprintf('A user with confirmation token "%s" does not exist', $token));
         }
 
         $this->userManager->confirm($user, $configuration);
@@ -136,11 +138,13 @@ class RegistrationController extends AbstractUserController
         return new RedirectResponse($url);
     }
 
-    public function finishAction(Request $request)
+    /**
+     * @throws ConfigurationException
+     */
+    public function finishAction(Request $request): Response
     {
-        $configKey = $this->getConfigKey($request);
-        $configuration = $this->provider->getRegistrationFinishConfiguration($configKey);
+        $configuration = $this->provider->getRegistrationFinishConfiguration();
 
-        return $this->render($this->getTemplate($configuration->getTemplate()));
+        return $this->render($this->resolveTemplate($configuration->getTemplate()));
     }
 }

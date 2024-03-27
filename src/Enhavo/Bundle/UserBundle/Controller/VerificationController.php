@@ -6,6 +6,7 @@ use Enhavo\Bundle\UserBundle\Configuration\ConfigurationProvider;
 use Enhavo\Bundle\UserBundle\Model\UserInterface;
 use Enhavo\Bundle\UserBundle\Repository\UserRepository;
 use Enhavo\Bundle\UserBundle\User\UserManager;
+use Enhavo\Bundle\UserBundle\Exception\TokenInvalidException;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -31,8 +32,7 @@ class VerificationController extends AbstractUserController
 
     public function requestAction(Request $request, $csrfToken)
     {
-        $configKey = $this->getConfigKey($request);
-        $configuration = $this->provider->getVerificationRequestConfiguration($configKey);
+        $configuration = $this->provider->getVerificationRequestConfiguration();
 
         /** @var UserInterface $user */
         $user = $this->getUser();
@@ -49,24 +49,23 @@ class VerificationController extends AbstractUserController
             throw $this->createNotFoundException();
         }
 
-        return $this->render($this->getTemplate($configuration->getTemplate()), [
+        return $this->render($this->resolveTemplate($configuration->getTemplate()), [
             'user' => $user,
         ]);
     }
 
     public function confirmAction(Request $request, $token)
     {
-        $configKey = $this->getConfigKey($request);
-        $configuration = $this->provider->getVerificationConfirmConfiguration($configKey);
+        $configuration = $this->provider->getVerificationConfirmConfiguration();
 
         $user = $this->userRepository->findByConfirmationToken($token);
 
         if ($user === null) {
-            throw $this->createNotFoundException();
+            throw new TokenInvalidException();
         }
 
         $this->userManager->verify($user);
 
-        return $this->render($this->getTemplate($configuration->getTemplate()));
+        return $this->render($this->resolveTemplate($configuration->getTemplate()));
     }
 }

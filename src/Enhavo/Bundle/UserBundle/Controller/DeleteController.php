@@ -5,7 +5,6 @@ namespace Enhavo\Bundle\UserBundle\Controller;
 use Enhavo\Bundle\FormBundle\Error\FormErrorResolver;
 use Enhavo\Bundle\UserBundle\Configuration\ConfigurationProvider;
 use Enhavo\Bundle\UserBundle\Form\Data\DeleteConfirm;
-use Enhavo\Bundle\UserBundle\Form\Data\ResetPassword;
 use Enhavo\Bundle\UserBundle\Model\UserInterface;
 use Enhavo\Bundle\UserBundle\User\UserManager;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -42,8 +41,7 @@ class DeleteController extends AbstractUserController
 
     public function confirmAction(Request $request)
     {
-        $configKey = $this->getConfigKey($request);
-        $configuration = $this->provider->getDeleteConfirmConfiguration($configKey);
+        $configuration = $this->provider->getDeleteConfirmConfiguration();
 
         /** @var UserInterface $user */
         $user = $this->getUser();
@@ -95,7 +93,7 @@ class DeleteController extends AbstractUserController
             }
         }
 
-        $response = $this->render($this->getTemplate($configuration->getTemplate()), [
+        $response = $this->render($this->resolveTemplate($configuration->getTemplate()), [
             'form' => $form->createView(),
             'error' => !$valid,
             'errors' => [
@@ -116,9 +114,8 @@ class DeleteController extends AbstractUserController
 
     public function finishAction(Request $request)
     {
-        $configKey = $this->getConfigKey($request);
-        $configuration = $this->provider->getDeleteFinishConfiguration($configKey);
+        $configuration = $this->provider->getDeleteFinishConfiguration();
 
-        return $this->render($this->getTemplate($configuration->getTemplate()));
+        return $this->render($this->resolveTemplate($configuration->getTemplate()));
     }
 }

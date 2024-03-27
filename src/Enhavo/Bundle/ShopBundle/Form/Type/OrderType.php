@@ -1,16 +1,11 @@
 <?php
-/**
- * OrderType.php
- *
- * @since 14/08/16
- * @author gseidel
- */
 
 namespace Enhavo\Bundle\ShopBundle\Form\Type;
 
-use Enhavo\Bundle\ShopBundle\Model\OrderInterface;
-use Sylius\Component\Payment\Model\PaymentInterface;
-use Enhavo\Bundle\ShopBundle\Model\ShipmentInterface;
+use Enhavo\Bundle\ShopBundle\Entity\Order;
+use Enhavo\Bundle\ShopBundle\Form\Type\Order\PaymentStateType;
+use Enhavo\Bundle\ShopBundle\Form\Type\Order\ShippingStateType;
+use Enhavo\Bundle\ShopBundle\Form\Type\Order\StateType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 
@@ -18,49 +13,12 @@ class OrderType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
-        $builder->add('state', 'choice', [
-            'multiple' => false,
-            'expanded' => true,
-            'choices' => [
-                OrderInterface::STATE_CONFIRMED => 'order.form.label.state.confirmed',
-                OrderInterface::STATE_CANCELLED => 'order.form.label.state.cancelled',
-                OrderInterface::STATE_RETURNED => 'order.form.label.state.returned',
-            ],
-            'translation_domain' => 'EnhavoShopBundle',
-            'label' => 'order.form.label.state.label'
+        $builder->add('address', AddressSubjectType::class, [
+            'data_class' => Order::class
         ]);
-
-        $builder->add('paymentState', 'choice', [
-            'multiple' => false,
-            'expanded' => true,
-            'choices' => [
-                PaymentInterface::STATE_PENDING => 'order.form.label.payment.pending',
-                PaymentInterface::STATE_COMPLETED => 'order.form.label.payment.completed',
-            ],
-            'translation_domain' => 'EnhavoShopBundle',
-            'label' => 'order.form.label.payment.label'
-        ]);
-
-        $builder->add('shippingState', 'choice', [
-            'multiple' => false,
-            'expanded' => true,
-            'choices' => [
-                ShipmentInterface::STATE_PENDING => 'order.form.label.shipping.pending',
-                ShipmentInterface::STATE_READY => 'order.form.label.shipping.ready',
-                ShipmentInterface::STATE_SHIPPED => 'order.form.label.shipping.shipped'
-            ],
-            'translation_domain' => 'EnhavoShopBundle',
-            'label' => 'order.form.label.shipping.label'
-        ]);
-
-        $builder->add('billingAddress', 'sylius_address');
-        $builder->add('shippingAddress', 'sylius_address');
-        $builder->add('differentBillingAddress', 'enhavo_boolean');
-
-        $builder->add('payment', 'enhavo_shop_payment');
     }
 
-    public function getBlockPrefix()
+    public function getBlockPrefix(): string
     {
         return 'enhavo_shop_order';
     }

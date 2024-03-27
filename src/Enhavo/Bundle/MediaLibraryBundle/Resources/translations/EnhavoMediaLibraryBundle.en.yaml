@@ -1,0 +1,45 @@
+media_library:
+    form_extension:
+        button:
+            label: 'Open Library'
+    label:
+        media_library: Media Library
+        library: 'File'
+        tag: 'Tag'
+        id: 'ID'
+        title: 'Title'
+        upload: 'Upload'
+        confirm_selection: 'Confirm Selection'
+    form:
+        label:
+            create_tag: 'Create tag'
+            filename: "Filename"
+            url: "Url"
+            content_type: "Content type"
+            tags: "Tags"
+    column:
+        label:
+            filename: 'Name'
+            extension: 'Suffix'
+            content_type: 'Type'
+            created_at: 'Date'
+    role:
+        file:
+            label:
+                index: 'Media-Library-File list'
+                create: 'Media-Library-File create'
+                update: 'Media-Library-File update'
+                delete: 'Media-Library-File delete'
+        tag:
+            label:
+                index: 'Media-Library-Tag list'
+                create: 'Media-Library-Tag create'
+                update: 'Media-Library-Tag update'
+                delete: 'Media-Library-Tag delete'
+    content_type:
+        audio: 'Audio'
+        archive: 'Archive'
+        document: 'Document'
+        text: 'Text'
+        image: 'Image'
+        video: 'Video'

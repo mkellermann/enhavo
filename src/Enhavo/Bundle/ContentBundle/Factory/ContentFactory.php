@@ -7,6 +7,19 @@ use Enhavo\Bundle\AppBundle\Factory\Factory;
 class ContentFactory extends Factory
 {
     /**
+     * @return Content
+     */
+    public function createNew(): Content
+    {
+        /** @var Content $resource */
+        $resource = parent::createNew();
+        $resource->setCreatedAt(new \DateTime());
+        $resource->setUpdatedAt(new \DateTime());
+
+        return $resource;
+    }
+
+    /**
      * @param Content|null $originalResource
      * @return Content
      */
@@ -26,8 +39,8 @@ class ContentFactory extends Factory
         $newResource->setPublic($originalResource->isPublic());
         $newResource->setPublicationDate($originalResource->getPublicationDate());
         $newResource->setPublishedUntil($originalResource->getPublishedUntil());
-        $newResource->setCreated(new \DateTime());
-        $newResource->setUpdated(new \DateTime());
+        $newResource->setCreatedAt(new \DateTime());
+        $newResource->setUpdatedAt(new \DateTime());
 
         return $newResource;
     }

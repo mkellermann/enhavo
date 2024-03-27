@@ -10,445 +10,202 @@ namespace Enhavo\Bundle\ShopBundle\Entity;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use Enhavo\Bundle\ShopBundle\Model\AddressSubjectInterface;
+use Enhavo\Bundle\ShopBundle\Model\OrderItemInterface;
+use Enhavo\Bundle\ShopBundle\State\OrderCheckoutStates;
+use Enhavo\Bundle\ShopBundle\State\OrderPaymentStates;
+use Enhavo\Bundle\ShopBundle\State\OrderShippingStates;
 use Enhavo\Bundle\UserBundle\Model\UserInterface;
 use Enhavo\Bundle\ShopBundle\Model\OrderInterface;
 use Enhavo\Bundle\ShopBundle\Model\ShipmentInterface;
-use Sylius\Component\Addressing\Model\AddressInterface;
 use Enhavo\Bundle\ShopBundle\Model\AdjustmentInterface;
 use Sylius\Component\Payment\Model\PaymentInterface;
+use Sylius\Component\Promotion\Model\PromotionCouponAwarePromotionSubjectInterface;
 use Sylius\Component\Promotion\Model\PromotionInterface;
 use Sylius\Component\Order\Model\Order as SyliusOrder;
 use Sylius\Component\Promotion\Model\PromotionCouponInterface;
 
 class Order extends SyliusOrder implements OrderInterface
 {
-    /**
-     * @var string
-     */
-    private $checkoutState;
+    use AddressSubjectTrait;
 
-    /**
-     * @var string
-     */
-    private $paymentState;
+    private string $paymentState = OrderPaymentStates::STATE_CART;
+    private string $shippingState = OrderShippingStates::STATE_CART;
+    private string $checkoutState = OrderCheckoutStates::STATE_CART;
 
-    /**
-     * @var string
-     */
-    private $shippingState;
+    private ?PromotionCouponInterface $promotionCoupon= null;
+    private ?UserInterface $user = null;
 
-    /**
-     * @var PromotionCouponInterface
-     */
-    private $promotionCoupon;
+    private ?string $email = null;
+    private ?string $token = null;
+    private ?bool $trackingMail = false;
+    private ?bool $shippable = true;
+    private ?string $currencyCode = null;
 
-    /**
-     * @var AddressInterface
-     */
-    private $shippingAddress;
+    /** @var Collection|PaymentInterface[] */
+    private $payments;
 
-    /**
-     * @var AddressInterface
-     */
-    private $billingAddress;
+    /** @var Collection|ShipmentInterface[] */
+    private $shipments;
 
-    /**
-     * @var boolean
-     */
-    private $differentBillingAddress;
-
-    /**
-     * @var \DateTime
-     */
-    private $orderedAt;
-
-    /**
-     * @var PaymentInterface
-     */
-    private $payment;
-
-    /**
-     * @var ShipmentInterface
-     */
-    private $shipment;
-
-    /**
-     * @var Collection
-     */
+    /** @var Collection */
     private $promotions;
 
-    /**
-     * @var string
-     */
-    private $email;
-
-    /**
-     * @var UserInterface
-     */
-    private $user;
-
-    /**
-     * @var string
-     */
-    private $token;
-
-    /**
-     * @var boolean
-     */
-    private $trackingMail;
-
-    /**
-     * @var string
-     */
-    private $notice;
+    /** @var Collection */
+    private $vouchers;
 
     public function __construct()
     {
         parent::__construct();
         $this->promotions = new ArrayCollection();
+        $this->payments = new ArrayCollection();
+        $this->shipments = new ArrayCollection();
+        $this->vouchers = new ArrayCollection();
     }
 
-    /**
-     * Set checkoutState
-     *
-     * @param string $checkoutState
-     *
-     * @return Order
-     */
-    public function setCheckoutState($checkoutState)
-    {
-        $this->checkoutState = $checkoutState;
-
-        return $this;
-    }
-
-    /**
-     * Get checkoutState
-     *
-     * @return string
-     */
-    public function getCheckoutState()
-    {
-        return $this->checkoutState;
-    }
-
-    /**
-     * Set paymentState
-     *
-     * @param string $paymentState
-     *
-     * @return Order
-     */
-    public function setPaymentState($paymentState)
+    public function setPaymentState(?string $paymentState): void
     {
         $this->paymentState = $paymentState;
-
-        return $this;
     }
 
-    /**
-     * Get paymentState
-     *
-     * @return string
-     */
-    public function getPaymentState()
+    public function getPaymentState(): ?string
     {
         return $this->paymentState;
     }
 
-    /**
-     * Set shippingState
-     *
-     * @param string $shippingState
-     *
-     * @return Order
-     */
-    public function setShippingState($shippingState)
+    public function setShippingState(?string $shippingState): void
     {
         $this->shippingState = $shippingState;
-
-        return $this;
     }
 
-    /**
-     * Get shippingState
-     *
-     * @return string
-     */
-    public function getShippingState()
+    public function getShippingState(): ?string
     {
         return $this->shippingState;
     }
 
-    /**
-     * Set promotionCoupon
-     *
-     * @param PromotionCouponInterface $promotionCoupon
-     *
-     * @return Order
-     */
-    public function setPromotionCoupon(?PromotionCouponInterface $promotionCoupon = null)
+    public function setPromotionCoupon(?PromotionCouponInterface $promotionCoupon)
     {
         $this->promotionCoupon = $promotionCoupon;
-
-        return $this;
     }
 
-    /**
-     * Get promotionCoupon
-     *
-     * @return PromotionCouponInterface
-     */
     public function getPromotionCoupon(): ?PromotionCouponInterface
     {
         return $this->promotionCoupon;
     }
 
-    /**
-     * Set shippingAddress
-     *
-     * @param AddressInterface $shippingAddress
-     *
-     * @return Order
-     */
-    public function setShippingAddress(AddressInterface $shippingAddress = null)
-    {
-        $this->shippingAddress = $shippingAddress;
-
-        return $this;
-    }
-
-    /**
-     * Get shippingAddress
-     *
-     * @return AddressInterface
-     */
-    public function getShippingAddress()
-    {
-        return $this->shippingAddress;
-    }
-
-    /**
-     * Set billingAddress
-     *
-     * @param AddressInterface $billingAddress
-     *
-     * @return Order
-     */
-    public function setBillingAddress(AddressInterface $billingAddress = null)
-    {
-        $this->billingAddress = $billingAddress;
-
-        return $this;
-    }
-
-    /**
-     * Get billingAddress
-     *
-     * @return \Sylius\Component\Addressing\Model\AddressInterface
-     */
-    public function getBillingAddress()
-    {
-        return $this->billingAddress;
-    }
-
-    /**
-     * Set differentBillingAddress
-     *
-     * @param boolean $differentBillingAddress
-     * @return Order
-     */
-    public function setDifferentBillingAddress($differentBillingAddress)
-    {
-        $this->differentBillingAddress = $differentBillingAddress;
-
-        return $this;
-    }
-
-    /**
-     * Get differentBillingAddress
-     *
-     * @return boolean 
-     */
-    public function getDifferentBillingAddress()
-    {
-        return $this->differentBillingAddress;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isDifferentBillingAddress()
-    {
-        return !!$this->getDifferentBillingAddress();
-    }
-
-    /**
-     * Set orderedAt
-     *
-     * @param \DateTime $orderedAt
-     * @return Order
-     */
-    public function setOrderedAt($orderedAt)
-    {
-        $this->orderedAt = $orderedAt;
-
-        return $this;
-    }
-
-    /**
-     * Get orderedAt
-     *
-     * @return \DateTime 
-     */
-    public function getOrderedAt()
-    {
-        return $this->orderedAt;
-    }
-
-    /**
-     * Set payment
-     *
-     * @param PaymentInterface $payment
-     * @return Order
-     */
-    public function setPayment(PaymentInterface $payment = null)
-    {
-        $this->payment = $payment;
-
-        return $this;
-    }
-
-    /**
-     * Get payment
-     *
-     * @return PaymentInterface
-     */
-    public function getPayment()
-    {
-        return $this->payment;
-    }
-
-    /**
-     * Set shipment
-     *
-     * @param ShipmentInterface $shipment
-     * @return Order
-     */
-    public function setShipment(ShipmentInterface $shipment = null)
-    {
-        $shipment->setOrder($this);
-        $this->shipment = $shipment;
-
-        return $this;
-    }
-
-    /**
-     * Get shipment
-     *
-     * @return ShipmentInterface
-     */
-    public function getShipment()
-    {
-        return $this->shipment;
-    }
-
-    /**
-     * Add promotions
-     *
-     * @param PromotionInterface $promotions
-     * @return Order
-     */
     public function addPromotion(PromotionInterface $promotions): void
     {
         $this->promotions[] = $promotions;
     }
 
-    /**
-     * Remove promotions
-     *
-     * @param PromotionInterface $promotions
-     */
     public function removePromotion(PromotionInterface $promotions): void
     {
         $this->promotions->removeElement($promotions);
     }
 
-    /**
-     * Get promotions
-     *
-     * @return \Doctrine\Common\Collections\Collection 
-     */
     public function getPromotions(): Collection
     {
         return $this->promotions;
     }
 
-    /**
-     * @inheritdoc
-     */
+    public function getVouchers(): Collection
+    {
+        return $this->vouchers;
+    }
+
+    public function addVoucher($voucher)
+    {
+        $this->vouchers->add($voucher);
+    }
+
+    public function removeVoucher($voucher)
+    {
+        $this->vouchers->removeElement($voucher);
+    }
+
     public function getPromotionSubjectTotal(): int
     {
         return $this->getItemsTotal();
     }
 
-    /**
-     * @inheritdoc
-     */
     public function hasPromotion(PromotionInterface $promotion): bool
     {
        return $this->promotions->contains($promotion);
     }
 
-    /**
-     * @inheritdoc
-     */
-    public function getPromotionSubjectCount()
+    public function getPromotionSubjectCount(): int
     {
         return $this->getTotalQuantity();
     }
 
-    /**
-     * Set email
-     *
-     * @param string $email
-     * @return Order
-     */
-    public function setEmail($email)
+    public function addPayment(PaymentInterface $payment)
     {
-        $this->email = $email;
+        $this->payments->add($payment);
+        $payment->setOrder($this);
+    }
 
-        return $this;
+    public function removePayment(PaymentInterface $payment)
+    {
+        $this->payments->removeElement($payment);
+        $payment->setOrder(null);
     }
 
     /**
-     * Get email
-     *
-     * @return string 
+     * @return Collection|array<PaymentInterface>
      */
-    public function getEmail()
+    public function getPayments(): Collection|array
+    {
+        return $this->payments;
+    }
+
+    public function addShipment(ShipmentInterface $shipment)
+    {
+        $this->shipments->add($shipment);
+        $shipment->setOrder($this);
+    }
+
+    public function hasShipments(): bool
+    {
+        return $this->shipments->count() > 0;
+    }
+
+    public function removeShipment(ShipmentInterface $shipment)
+    {
+        $this->shipments->removeElement($shipment);
+        $shipment->setOrder(null);
+    }
+
+    /**
+     * @return Collection|array<ShipmentInterface>
+     */
+    public function getShipments(): Collection|array
+    {
+        return $this->shipments;
+    }
+
+    public function removeShipments()
+    {
+        $shipments = $this->getShipments();
+        foreach ($shipments as $shipment) {
+            $this->removeShipment($shipment);
+        }
+    }
+
+    public function setEmail(?string $email)
+    {
+        $this->email = $email;
+    }
+
+    public function getEmail(): ?string
     {
         return $this->email;
     }
 
-    /**
-     * Set user
-     *
-     * @param UserInterface $user
-     * @return Order
-     */
     public function setUser(UserInterface $user = null)
     {
         $this->user = $user;
-
-        return $this;
     }
 
-    /**
-     * Get user
-     *
-     * @return UserInterface
-     */
     public function getUser()
     {
         return $this->user;
@@ -489,15 +246,25 @@ class Order extends SyliusOrder implements OrderInterface
         return $total;
     }
 
-    public function getDiscountTotal()
+    public function getDiscountedTotal()
     {
         $total = 0;
-        $adjustments = $this->getAdjustments(AdjustmentInterface::ORDER_PROMOTION_ADJUSTMENT);
+        $adjustments = $this->getAdjustmentsRecursively(AdjustmentInterface::ORDER_PROMOTION_ADJUSTMENT);
         foreach($adjustments as $adjustment) {
             $total += $adjustment->getAmount();
         }
 
-        $adjustments = $this->getAdjustments(AdjustmentInterface::TAX_PROMOTION_ADJUSTMENT);
+        $adjustments = $this->getAdjustmentsRecursively(AdjustmentInterface::ORDER_UNIT_PROMOTION_ADJUSTMENT);
+        foreach($adjustments as $adjustment) {
+            $total += $adjustment->getAmount();
+        }
+
+        $adjustments = $this->getAdjustmentsRecursively(AdjustmentInterface::ORDER_ITEM_PROMOTION_ADJUSTMENT);
+        foreach($adjustments as $adjustment) {
+            $total += $adjustment->getAmount();
+        }
+
+        $adjustments = $this->getAdjustmentsRecursively(AdjustmentInterface::ORDER_SHIPPING_PROMOTION_ADJUSTMENT);
         foreach($adjustments as $adjustment) {
             $total += $adjustment->getAmount();
         }
@@ -523,6 +290,15 @@ class Order extends SyliusOrder implements OrderInterface
         return $total;
     }
 
+    public function getDiscountedUnitPriceTotal()
+    {
+        $total = 0;
+        foreach($this->getItems() as $items) {
+            $total += $items->getDiscountedUnitPriceTotal();
+        }
+        return $total;
+    }
+
     public function getUnitTaxTotal()
     {
         $total = 0;
@@ -542,11 +318,11 @@ class Order extends SyliusOrder implements OrderInterface
             $total += $adjustment->getAmount();
         }
 
-        $taxes = $this->getAdjustments(AdjustmentInterface::TAX_PROMOTION_ADJUSTMENT);
+        $taxes = $this->getAdjustments(AdjustmentInterface::TAX_SHIPPING_ADJUSTMENT);
         foreach($taxes as $adjustment) {
             $total += $adjustment->getAmount();
         }
-        
+
         return $total;
     }
 
@@ -600,19 +376,95 @@ class Order extends SyliusOrder implements OrderInterface
         return $this->paymentState === PaymentInterface::STATE_COMPLETED;
     }
 
-    /**
-     * @return string
-     */
-    public function getNotice()
+    public function getCheckoutState(): string
     {
-        return $this->notice;
+        return $this->checkoutState;
     }
 
-    /**
-     * @param string $notice
-     */
-    public function setNotice($notice)
+    public function setCheckoutState(string $checkoutState): void
     {
-        $this->notice = $notice;
+        $this->checkoutState = $checkoutState;
+    }
+
+    public function isShippable()
+    {
+        return $this->shippable;
+    }
+
+    public function setShippable($value)
+    {
+        $this->shippable = $value;
+    }
+
+    public function getAddress(): AddressSubjectInterface
+    {
+        return $this;
+    }
+
+    public function getItemUnits(): Collection
+    {
+        /** @var ArrayCollection<int, OrderItemInterface> $units */
+        $units = new ArrayCollection();
+
+        /** @var OrderItem $item */
+        foreach ($this->getItems() as $item) {
+            foreach ($item->getUnits() as $unit) {
+                $units->add($unit);
+            }
+        }
+
+        return $units;
+    }
+
+    public function getLastPayment(?string $state = null): ?PaymentInterface
+    {
+        if ($this->payments->isEmpty()) {
+            return null;
+        }
+
+        $payment = $this->payments->filter(function (PaymentInterface $payment) use ($state): bool {
+            return null === $state || $payment->getState() === $state;
+        })->last();
+
+        return $payment !== false ? $payment : null;
+    }
+
+    public function getCurrencyCode(): ?string
+    {
+        return $this->currencyCode;
+    }
+
+    public function setCurrencyCode(?string $currencyCode): void
+    {
+        $this->currencyCode = $currencyCode;
+    }
+
+    public function getItemsTaxTotal()
+    {
+        $tax = 0;
+        foreach ($this->items as $item) {
+            $adjustments = $item->getAdjustmentsRecursively(AdjustmentInterface::TAX_ADJUSTMENT);
+            foreach ($adjustments as $adjustment) {
+                $tax += $adjustment->getAmount();
+            }
+        }
+        return $tax;
+    }
+
+    public function getVoucherAmountTotal()
+    {
+        $amount = 0;
+
+        $adjustments = $this->getAdjustmentsRecursively(AdjustmentInterface::VOUCHER_ADJUSTMENT);
+        foreach ($adjustments as $adjustment) {
+            $amount += $adjustment->getAmount();
+        }
+
+        return $amount;
+    }
+
+    public function getItemsNetTotal()
+    {
+        return $this->getItemsTotal() - $this->getItemsTaxTotal();
     }
 }

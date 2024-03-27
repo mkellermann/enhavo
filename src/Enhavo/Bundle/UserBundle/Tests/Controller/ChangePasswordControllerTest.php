@@ -15,7 +15,6 @@ use Enhavo\Bundle\UserBundle\User\UserManager;
 use FOS\RestBundle\View\View;
 use FOS\RestBundle\View\ViewHandler;
 use PHPUnit\Framework\MockObject\MockObject;
-use PHPUnit\Framework\TestCase;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\ParameterBag;
 use Symfony\Component\HttpFoundation\Request;
@@ -166,7 +165,7 @@ class ChangePasswordControllerMock extends ChangePasswordController
     public $hasUser = false;
     public $flashMessages = [];
 
-    protected function getUser()
+    protected function getUser(): ?\Symfony\Component\Security\Core\User\UserInterface
     {
         if ($this->hasUser) {
             return new User();
@@ -180,7 +179,7 @@ class ChangePasswordControllerMock extends ChangePasswordController
         return $this->flashMessages;
     }
 
-    protected function addFlash(string $type, $message)
+    protected function addFlash(string $type, $message): void
     {
         $this->flashMessages[$type] = $message;
     }

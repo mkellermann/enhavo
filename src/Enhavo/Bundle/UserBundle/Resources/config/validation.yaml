@@ -2,19 +2,24 @@ Enhavo\Bundle\UserBundle\Model\User:
     constraints:
         - Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity:
             fields: email
-            groups: [register]
+            groups: [unique_email]
+        - Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity:
+              fields: username
+              groups: [unique_username]
     properties:
-        username:
-            - NotBlank: ~
         email:
             - Email:
                 message: The email "{{ value }}" is not a valid email.
-                checkMX: true
+                groups: [register, create, update]
             - NotBlank:
-                groups: [register]
+                groups: [register, create, update]
         plainPassword:
             - NotBlank:
-                groups: [register, reset]
+                groups: [register, reset_password, create, change_password]
+            - Length:
+                groups: [register, reset_password, create, change_password]
+                min: 8
+                minMessage: 'enhavo_user.password.length'
 
 Enhavo\Bundle\UserBundle\Model\Group:
     constraints:
@@ -26,7 +31,7 @@ Enhavo\Bundle\UserBundle\Model\Group:
 
 Enhavo\Bundle\UserBundle\Form\Data\ResetPassword:
     properties:
-        username:
+        userIdentifier:
             - Enhavo\Bundle\UserBundle\Validator\Constraints\UserExists:
                   groups: [exists]
             - NotBlank:

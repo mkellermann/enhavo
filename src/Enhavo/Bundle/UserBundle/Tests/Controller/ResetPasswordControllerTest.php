@@ -7,14 +7,13 @@
 namespace Controller;
 
 
-use Enhavo\Bundle\AppBundle\Template\TemplateManager;
+use Enhavo\Bundle\AppBundle\Template\TemplateResolver;
 use Enhavo\Bundle\FormBundle\Error\FormErrorResolver;
 use Enhavo\Bundle\UserBundle\Controller\ResetPasswordController;
 use Enhavo\Bundle\UserBundle\Model\User;
 use Enhavo\Bundle\UserBundle\Repository\UserRepository;
 use Enhavo\Bundle\UserBundle\User\UserManager;
 use PHPUnit\Framework\MockObject\MockObject;
-use PHPUnit\Framework\TestCase;
 use Sylius\Component\Resource\Factory\FactoryInterface;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -33,8 +32,7 @@ class ResetPasswordControllerTest //extends TestCase
         return new ResetPasswordControllerMock(
             $dependencies->userManager,
             $dependencies->userRepository,
-            $dependencies->templateManager,
-            $dependencies->userFactory,
+            $dependencies->templateResolver,
             $dependencies->translator,
             $dependencies->errorResolver
         );
@@ -45,11 +43,10 @@ class ResetPasswordControllerTest //extends TestCase
         $dependencies = new ResetPasswordControllerTestDependencies();
         $dependencies->userManager = $this->getMockBuilder(UserManager::class)->disableOriginalConstructor()->getMock();
         $dependencies->userRepository = $this->getMockBuilder(UserRepository::class)->disableOriginalConstructor()->getMock();
-        $dependencies->templateManager = $this->getMockBuilder(TemplateManager::class)->disableOriginalConstructor()->getMock();
-        $dependencies->templateManager->method('getTemplate')->willReturnCallback(function ($template) {
+        $dependencies->templateResolver = $this->getMockBuilder(TemplateResolver::class)->disableOriginalConstructor()->getMock();
+        $dependencies->templateResolver->method('resolve')->willReturnCallback(function ($template) {
             return $template .'.managed';
         });
-        $dependencies->userFactory = $this->getMockBuilder(FactoryInterface::class)->getMock();
         $dependencies->translator = $this->getMockBuilder(TranslatorInterface::class)->getMock();
         $dependencies->translator->method('trans')->willReturnCallback(function ($message, $b, $c, $d) {
             return $message .'.translated';
@@ -82,8 +79,7 @@ class ResetPasswordControllerTest //extends TestCase
     public function testRequest()
     {
         $dependencies = $this->createDependencies();
-        $dependencies->userFactory->method('createNew')->willReturn(new User());
-        $dependencies->userManager->method('getTemplate')->willReturn('request.html.twig');
+        $dependencies->userManager->method('resolve')->willReturn('request.html.twig');
         $dependencies->userManager->method('getStylesheets')->willReturn([]);
         $dependencies->userManager->method('getJavascripts')->willReturn([]);
         $dependencies->userManager->expects($this->once())->method('getRedirectRoute')->willReturn('redirect.route');
@@ -134,8 +130,7 @@ class ResetPasswordControllerTest //extends TestCase
     {
         $dependencies = $this->createDependencies();
         $dependencies->request->method('isXmlHttpRequest')->willReturn(true);
-        $dependencies->userFactory->method('createNew')->willReturn(new User());
-        $dependencies->userManager->method('getTemplate')->willReturn('request.html.twig');
+        $dependencies->userManager->method('resolve')->willReturn('request.html.twig');
         $dependencies->userManager->method('getStylesheets')->willReturn([]);
         $dependencies->userManager->method('getJavascripts')->willReturn([]);
         $dependencies->userManager->expects($this->once())->method('getRedirectRoute')->willReturn('redirect.route');
@@ -184,7 +179,7 @@ class ResetPasswordControllerTest //extends TestCase
     public function testCheck()
     {
         $dependencies = $this->createDependencies();
-        $dependencies->userManager->method('getTemplate')->willReturnCallback(function($config, $action) {
+        $dependencies->userManager->method('resolve')->willReturnCallback(function($config, $action) {
             $this->assertEquals('theme', $config);
             $this->assertEquals('reset_password_check', $action);
 
@@ -206,7 +201,7 @@ class ResetPasswordControllerTest //extends TestCase
         $dependencies = $this->createDependencies();
         $dependencies->userManager->method('getRedirectRoute')->willReturn('redirect.route');
         $dependencies->userRepository->method('findByConfirmationToken')->willReturn(new User());
-        $dependencies->userManager->method('getTemplate')->willReturnCallback(function($config, $action) {
+        $dependencies->userManager->method('resolve')->willReturnCallback(function($config, $action) {
             $this->assertEquals('theme', $config);
             $this->assertEquals('reset_password_confirm', $action);
 
@@ -246,7 +241,7 @@ class ResetPasswordControllerTest //extends TestCase
         $dependencies = $this->createDependencies();
         $dependencies->userManager->method('getRedirectRoute')->willReturn('redirect.route');
         $dependencies->userRepository->method('findByConfirmationToken')->willReturn(new User());
-        $dependencies->userManager->method('getTemplate')->willReturnCallback(function($config, $action) {
+        $dependencies->userManager->method('resolve')->willReturnCallback(function($config, $action) {
             $this->assertEquals('theme', $config);
             $this->assertEquals('reset_password_confirm', $action);
 
@@ -302,7 +297,7 @@ class ResetPasswordControllerTest //extends TestCase
     public function testFinish()
     {
         $dependencies = $this->createDependencies();
-        $dependencies->userManager->method('getTemplate')->willReturnCallback(function($config, $action) {
+        $dependencies->userManager->method('resolve')->willReturnCallback(function($config, $action) {
             $this->assertEquals('theme', $config);
             $this->assertEquals('reset_password_finish', $action);
 
@@ -330,11 +325,8 @@ class ResetPasswordControllerTestDependencies
     /** @var UserRepository|MockObject */
     public $userRepository;
 
-    /** @var TemplateManager|MockObject */
-    public $templateManager;
-
-    /** @var FactoryInterface|MockObject */
-    public $userFactory;
+    /** @var TemplateResolver|MockObject */
+    public $templateResolver;
 
     /** @var TranslatorInterface|MockObject */
     public $translator;
@@ -373,7 +365,7 @@ class ResetPasswordControllerMock extends ResetPasswordController
         return $this->flashMessages;
     }
 
-    protected function addFlash(string $type, $message)
+    protected function addFlash(string $type, $message): void
     {
         $this->flashMessages[$type] = $message;
     }

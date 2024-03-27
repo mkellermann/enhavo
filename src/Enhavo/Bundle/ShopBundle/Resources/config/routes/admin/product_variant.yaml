@@ -4,9 +4,8 @@ sylius_product_variant_index:
     path: /enhavo/shop/product/{productId}/variant/index
     methods: [GET]
     defaults:
-        _controller: sylius.controller.product_variant:indexAction
+        _controller: sylius.controller.product_variant::indexAction
         _sylius:
-            form: sylius_product_variant
             viewer:
                 table_route_parameters:
                     productId: $productId
@@ -27,16 +26,15 @@ sylius_product_variant_create:
     path: /enhavo/shop/product/{productId}/variant/create
     methods: [GET,POST]
     defaults:
-        _controller: sylius.controller.product_variant:createAction
+        _controller: sylius.controller.product_variant::createAction
         _sylius:
             label: product_variant.label.create
             translation_domain: EnhavoShopBundle
             sortable: true
             redirect: sylius_product_variant_update
             factory:
-                method: createForProductWithId
-                arguments: $productId
-            form: Enhavo\Bundle\ShopBundle\Form\Type\ProductVariantType
+                method: createForProduct
+                arguments: [expr:notFoundOnNull(service('sylius.repository.product').find($productId))]
             viewer:
                 table_route_parameters:
                     productId: $id
@@ -48,15 +46,19 @@ sylius_product_variant_create:
                     main:
                         label: product_variant.label.variant
                         translation_domain: EnhavoShopBundle
-                        template: EnhavoShopBundle:admin/resource/product-variant:product-variant.html.twig
+                        template: admin/resource/product-variant/product-variant.html.twig
                     customize:
                         label: product_variant.label.customize
                         translation_domain: EnhavoShopBundle
-                        template: EnhavoShopBundle:admin/resource/product-variant:customize.html.twig
+                        template: admin/resource/product-variant/customize.html.twig
                     dimension:
                         label: product_variant.label.dimension
                         translation_domain: EnhavoShopBundle
-                        template: EnhavoShopBundle:admin/resource/product-variant:dimension.html.twig
+                        template: admin/resource/product-variant/dimension.html.twig
+                    meta:
+                        label: content.label.meta
+                        translation_domain: EnhavoContentBundle
+                        template: admin/resource/content/meta.html.twig
 
 sylius_product_variant_update:
     options:
@@ -64,25 +66,28 @@ sylius_product_variant_update:
     path: /enhavo/shop/product/variant/update/{id}
     methods: [GET,POST]
     defaults:
-        _controller: sylius.controller.product_variant:updateAction
+        _controller: sylius.controller.product_variant::updateAction
         _sylius:
             label: product_variant.label.edit
             translation_domain: EnhavoShopBundle
-            form: Enhavo\Bundle\ShopBundle\Form\Type\ProductVariantType
             viewer:
                 tabs:
                     main:
                         label: product_variant.label.variant
                         translation_domain: EnhavoShopBundle
-                        template: EnhavoShopBundle:admin/resource/product-variant:product-variant.html.twig
+                        template: admin/resource/product-variant/product-variant.html.twig
                     customize:
                         label: product_variant.label.customize
                         translation_domain: EnhavoShopBundle
-                        template: EnhavoShopBundle:admin/resource/product-variant:customize.html.twig
+                        template: admin/resource/product-variant/customize.html.twig
                     dimension:
                         label: product_variant.label.dimension
                         translation_domain: EnhavoShopBundle
-                        template: EnhavoShopBundle:admin/resource/product-variant:dimension.html.twig
+                        template: admin/resource/product-variant/dimension.html.twig
+                    meta:
+                        label: content.label.meta
+                        translation_domain: EnhavoContentBundle
+                        template: admin/resource/content/meta.html.twig
 
 sylius_product_variant_table:
     options:
@@ -90,7 +95,7 @@ sylius_product_variant_table:
     path: /enhavo/shop/product/{productId}/variant/table
     defaults:
         page: 1
-        _controller: sylius.controller.product_variant:tableAction
+        _controller: sylius.controller.product_variant::tableAction
         _sylius:
             sortable: true
             sorting:
@@ -119,6 +124,18 @@ sylius_product_variant_table:
                         translation_domain: EnhavoShopBundle
                         property: name
                         width: 4
+                    default:
+                        type: boolean
+                        label: product_variant.form.label.default
+                        translation_domain: EnhavoShopBundle
+                        property: default
+                        width: 2
+                    index:
+                        type: boolean
+                        label: product_variant.form.label.index
+                        translation_domain: EnhavoShopBundle
+                        property: index
+                        width: 2
                     stock:
                         type: text
                         label: product_variant.form.label.stock
@@ -140,7 +157,7 @@ sylius_product_variant_delete:
     path: /enhavo/shop/product/variant/delete/{id}
     methods: [POST]
     defaults:
-        _controller: sylius.controller.product_variant:deleteAction
+        _controller: sylius.controller.product_variant::deleteAction
 
 sylius_product_variant_batch:
     options:
@@ -148,7 +165,7 @@ sylius_product_variant_batch:
     path: /enhavo/shop/product/variant/batch
     methods: [POST]
     defaults:
-        _controller: sylius.controller.product_variant:batchAction
+        _controller: sylius.controller.product_variant::batchAction
         _sylius:
             paginate: false
             criteria:

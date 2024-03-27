@@ -9,50 +9,21 @@ class Message
     const CONTENT_TYPE_PLAIN = 'text/plain';
 
     /** @var string */
-    private $from;
-
-    /** @var string */
-    private $senderName;
-
-    /** @var string */
-    private $to;
-
-    /** @var string */
-    private $subject;
-
-    /** @var string */
-    private $template;
-
-    /** @var array */
-    private $context;
-
-    /** @var array */
-    private $attachments;
-
-    /** @var string */
-    private $contentType;
-
-    /** @var string */
     private $content;
 
     public function __construct(
-        string $from = null,
-        string $senderName = null,
-        string $to = null,
-        string $subject = null,
-        string $template = null,
-        array $context = [],
-        array $attachments = [],
-        string $contentType = self::CONTENT_TYPE_PLAIN
+        private ?string $from = null,
+        private ?string $senderName = null,
+        private ?string $to = null,
+        private ?string $subject = null,
+        private ?string $template = null,
+        private array $context = [],
+        private array $attachments = [],
+        private string $contentType = self::CONTENT_TYPE_PLAIN,
+        private array $cc = [],
+        private array $bcc = [],
     ) {
-        $this->from = $from;
-        $this->senderName = $senderName;
-        $this->to = $to;
-        $this->subject = $subject;
-        $this->template = $template;
-        $this->context = $context;
-        $this->attachments = $attachments;
-        $this->contentType = $contentType;
+
     }
 
     /**
@@ -136,22 +107,6 @@ class Message
     }
 
     /**
-     * @return array
-     */
-    public function getAttachments(): array
-    {
-        return $this->attachments;
-    }
-
-    /**
-     * @param array $attachments
-     */
-    public function setAttachments(array $attachments): void
-    {
-        $this->attachments = $attachments;
-    }
-
-    /**
      * @return string
      */
     public function getContentType(): string
@@ -201,22 +156,24 @@ class Message
         }
     }
 
-    /**
-     * @param mixed $attachment
-     */
-    public function addAttachment($attachment)
+    public function addAttachment(Attachment $attachment)
     {
         $this->attachments[] = $attachment;
     }
 
-    /**
-     * @param mixed $attachment
-     */
-    public function removeAttachment($attachment)
+    public function removeAttachment(Attachment $attachment)
     {
         if (false !== $key = array_search($attachment, $this->attachments, true)) {
             array_splice($this->attachments, $key, 1);
         }
+    }
+
+    /**
+     * @return array<Attachment>
+     */
+    public function getAttachments(): array
+    {
+        return $this->attachments;
     }
 
     /**
@@ -233,5 +190,35 @@ class Message
     public function setContent(?string $content): void
     {
         $this->content = $content;
+    }
+
+    public function getCc(): array
+    {
+        return $this->cc;
+    }
+
+    public function setCc(array $cc): void
+    {
+        $this->cc = $cc;
+    }
+
+    public function addCc(string $cc)
+    {
+        $this->cc[] = $cc;
+    }
+
+    public function getBcc(): array
+    {
+        return $this->bcc;
+    }
+
+    public function setBcc(array $bcc): void
+    {
+        $this->bcc = $bcc;
+    }
+
+    public function addBcc(string $bcc)
+    {
+        $this->bcc[] = $bcc;
     }
 }

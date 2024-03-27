@@ -14,14 +14,10 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class MediaExtension extends AbstractTypeExtension
 {
-    /**
-     * @var array
-     */
-    private $formConfiguration;
-
-    public function __construct($formConfiguration)
+    public function __construct(
+        private array $formConfiguration
+    )
     {
-        $this->formConfiguration = $formConfiguration;
     }
 
     public function configureOptions(OptionsResolver $resolver)
@@ -35,8 +31,8 @@ class MediaExtension extends AbstractTypeExtension
         $resolver->setDefaults($options);
     }
 
-    public function getExtendedType()
+    public static function getExtendedTypes(): iterable
     {
-        return MediaType::class;
+        return [MediaType::class];
     }
 }

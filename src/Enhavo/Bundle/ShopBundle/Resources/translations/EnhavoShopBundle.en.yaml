@@ -8,14 +8,19 @@ checkout:
       label:
         paypal: Paypal
         debit: Debit
+
 promotion:
+  label:
+    coupon: Coupon
+    coupons: Coupons
   coupon:
     form:
       label:
         code: Code
-      action:
-        redeem: Redeem
-        cancel: Cancel
+    action:
+      redeem: Redeem
+      cancel: Cancel
+      generate: Generate
 
 voucher:
     label:
@@ -23,14 +28,40 @@ voucher:
         code: Code
         amount: Amount
         availableAmount: Available amount
+        expiredAt: Expired at
+        enabled: Enabled
+        partialRedeemable: Partial redeemable
+    message:
+        already_applied: The voucher already applied
+        amount_exceeded: The value of the voucher is higher then the cart
+country:
+    label:
+        country: Country
+        code: Code
+        name: Name
+
+address:
+    label:
+        billingAddress: Billing Address
+        shippingAddress: Shipping Address
+        sameAddress: Same as billing address
+
+shipping_method:
+    label:
+        shipping_method: Shipping method
 
 label:
+  shipment: Shipment
   product: Product
   order: Order
   sales: Sales
   shop: Shop
+  tag: Tag
+  category: Category
+  configuration: Configuration
+  catalog: Catalog
 
-mailer:
+mail:
   confirm:
     subject: Order
   tracking:
@@ -47,6 +78,8 @@ order:
       delete: 'Order delete'
   label:
     number: Ordernumber
+    index: IndexData
+    default: Standard
     ordered_at: Ordered At
     name: Name
     order: Order
@@ -79,27 +112,38 @@ order:
     shipped: Shipped
     cancelled: Cancelled
     shippingMethod: Shipping type
-
+    state: State
+    shippingState: Shipment
+    paymentState: Payment
+    voucher: Voucher
   action:
     transfer: Transfer to cart
     purchase: Pay
-
+    cancel: cancel
+    paid: Paid
+    refund: Refund
+    ship: Ship
+  shippingState:
+    ready: Ready
+    partially_shipped: Partially shipped
+    shipped: Shipped
+    cancelled: Abgebrochen
+  paymentState:
+    awaiting_payment: Awaiting payment
+    cancelled: Cancelled
+    paid: Paid
+    partially_paid: Partially paid
+    partially_refunded: Partially refunded
+    refunded: Refunded
+  state:
+    new: New
+    cancelled: Cancelled
+    fulfilled: Fulfilled
   form:
     label:
-      state:
-        label: State
-        cancelled: Cancelled
-        confirmed: Confirmed
-        returned: Returned
-      payment:
-        label: Payment
-        completed: Completed
-        pending: Pending
-      shipping:
-        label: Shipping
-        pending: Pending
-        ready: Ready
-        shipped: Shipped
+      state: State
+      payment: Payment
+      shipping: Shipping
 
 order_item:
   form:
@@ -117,10 +161,13 @@ product:
   form:
     label:
       product_association:
-       type: Association type
+      type: Association type
+      taxCategory: Tax Category
+      shippingRequired: Versand notwendig
       active: Active
       code: Code
       title: Title
+      description: Description
       picture: Picture
       pictures: Pictures
       price: Price
@@ -144,6 +191,7 @@ product:
     product_option: Option
     product_attribute: Attribute
     product_association_type: Association Types
+    promotion: Promotion
     dimension: Dimension
     options: Options
     meta: Meta
@@ -170,6 +218,7 @@ product_variant:
     label:
       active: Active
       title: Title
+      description: Description
       options: Options
       picture: Picture
       pictures: Pictures
@@ -177,11 +226,6 @@ product_variant:
       reducedPrice: Reduced price
       reduced: Reduced?
       shippingCategory: Shipping category
-      width: Width
-      height: Height
-      depth: Depth
-      weight: Weight
-      volume: Volume
       taxRate: Tax rate
       code: Code
       name: Name
@@ -190,6 +234,12 @@ product_variant:
       stock_tracked: Stock tracked?
       shipping_category: Shipping category
       shipping_required: Shipping required?
+      overrideDescription: Override description?
+      overridePictures: Override pictures?
+      overridePrice: Override price?
+      overrideTaxCategory: Override tax category?
+      overrideShipping: Override shipping?
+      overrideDimensions: Override dimensions?
 
 product_attribute:
   action:
@@ -205,6 +255,7 @@ product_attribute:
   label:
     name: 'Name'
     storage_type: Storage type
+    type: Type
     position: Position
     variant: Variant
     customize: Customize

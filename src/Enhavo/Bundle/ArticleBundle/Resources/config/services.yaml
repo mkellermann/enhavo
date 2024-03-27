@@ -29,7 +29,7 @@ services:
     enhavo_article.statistic.article:
         class: Enhavo\Bundle\ArticleBundle\Statistic\ArticleStatistic
         calls:
-          - ['setContainer', ['@service_container']]
+          - [setContainer, ['@service_container']]
         tags:
             - { name: enhavo.statistic, alias: article }
 
@@ -49,13 +49,6 @@ services:
         tags:
             - { name: enhavo.widget, alias: article_list }
 
-    Enhavo\Bundle\ArticleBundle\Controller\ArticleController:
-        public: true
-        arguments:
-            - '@Enhavo\Bundle\CommentBundle\Comment\CommentManager'
-        calls:
-            - [setContainer, ['@service_container']]
-
     enhavo_article.factory.article:
         public: true
         class: '%enhavo_article.factory.article.class%'
@@ -71,3 +64,17 @@ services:
             - '@enhavo_article.repository.article'
         tags:
             - { name: enhavo.provider, alias: article.total }
+
+    Enhavo\Bundle\ArticleBundle\Vue\ArticleVueRouteProviderType:
+        tags:
+            - { name: enhavo_app.vue_route_provider }
+
+    Enhavo\Bundle\ArticleBundle\Endpoint\ArticleEndpointType:
+        arguments:
+            - '@enhavo_article.repository.article'
+            - '@Enhavo\Bundle\CommentBundle\Comment\CommentManager'
+        calls:
+            - [setContainer, ['@Psr\Container\ContainerInterface']]
+        tags:
+            - { name: enhavo_api.endpoint }
+            - { name: container.service_subscriber }

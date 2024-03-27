@@ -1,6 +1,14 @@
 .idea
 .settings
 .build
+.phpunit.result.cache
+.yarn
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
 /public/bundles/
 /public/build/*
 !/public/build/.gitignore
@@ -28,3 +36,4 @@
 /yarn.lock
 /drivers
 /config/block/
+

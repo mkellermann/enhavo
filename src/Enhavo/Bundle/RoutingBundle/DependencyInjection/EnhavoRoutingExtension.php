@@ -26,7 +26,6 @@ class EnhavoRoutingExtension extends AbstractResourceExtension implements Prepen
         $this->registerResources('enhavo_routing', $config['driver'], $config['resources'], $container);
 
         $container->setParameter('enhavo_routing.classes', $config['classes']);
-        $container->setParameter('enhavo_routing.condition_resolver', $config['condition_resolver']);
 
         $loader = new Loader\YamlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
         $loader->load('services/cfm.yaml');
@@ -42,21 +41,15 @@ class EnhavoRoutingExtension extends AbstractResourceExtension implements Prepen
      */
     public function prepend(ContainerBuilder $container)
     {
-        $path = __DIR__ . '/../Resources/config/app/';
-        $files = scandir($path);
+        $configs = Yaml::parse(file_get_contents(__DIR__.'/../Resources/config/app/config.yaml'));
 
-        foreach ($files as $file) {
-            if (preg_match('/\.yaml$/', $file)) {
-                $settings = Yaml::parse(file_get_contents($path . $file));
-                if (is_array($settings)) {
-                    if (is_array($settings)) {
-                    foreach ($settings as $name => $value) {
-                        if (is_array($value)) {
-                            $container->prependExtensionConfig($name, $value);
-                        }
-                    }
-                }
-                }
+        if (class_exists('\Stof\DoctrineExtensionsBundle\StofDoctrineExtensionsBundle')) {
+            $configs = array_merge($configs, Yaml::parse(file_get_contents(__DIR__.'/../Resources/config/app/config-gedmo.yaml')));
+        }
+
+        foreach($configs as $name => $config) {
+            if (is_array($config)) {
+                $container->prependExtensionConfig($name, $config);
             }
         }
     }

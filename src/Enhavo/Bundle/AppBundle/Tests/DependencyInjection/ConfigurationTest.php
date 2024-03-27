@@ -61,6 +61,7 @@ class ConfigurationTest extends TestCase
                         'to' => 'default_to',
                         'subject' => 'default_subject',
                         'template' => 'default_template',
+                        'translation_domain' => null,
                     ]
                 ]
             ]
@@ -75,6 +76,7 @@ class ConfigurationTest extends TestCase
                         'to' => 'other_to',
                         'subject' => 'other_subject',
                         'template' => 'other_template',
+                        'translation_domain' => 'other_domain',
                     ]
                 ]
             ]
@@ -88,18 +90,64 @@ class ConfigurationTest extends TestCase
                 'from' => 'default_from',
                 'name' => 'default_name',
                 'to' => 'default_to',
+                'cc' => null,
+                'bcc' => null,
                 'subject' => 'default_subject',
                 'template' => 'default_template',
-                'content_type' => 'text/plain'
+                'content_type' => 'text/plain',
+                'translation_domain' => null,
             ],
             'other' => [
                 'from' => 'other_from',
                 'name' => 'other_name',
                 'to' => 'other_to',
+                'cc' => null,
+                'bcc' => null,
                 'subject' => 'other_subject',
                 'template' => 'other_template',
-                'content_type' => 'text/plain'
+                'content_type' => 'text/plain',
+                'translation_domain' => 'other_domain',
             ]
         ], $config['mailer']['mails']);
+    }
+
+    public function testAreaMerge()
+    {
+        $a = [
+            'area' => [
+                'theme' => [
+                    'firewall' => 'main',
+                    'options' => [
+                        'navigation' => ['main'],
+                        'routes' => ['theme']
+                    ]
+                ]
+            ]
+        ];
+
+        $b = [
+            'area' => [
+                'theme' => [
+                    'firewall' => 'main',
+                    'options' => [
+                        'navigation' => ['footer']
+                    ]
+                ]
+            ]
+        ];
+
+        $configuration = new Configuration();
+        $config = $this->process($configuration, [$a, $b]);
+
+        $this->assertEquals([
+            'theme' => [
+                'firewall' => 'main',
+                'path' => null,
+                'options' => [
+                    'navigation' => ['footer'],
+                    'routes' => ['theme'],
+                ]
+            ]
+        ], $config['area']);
     }
 }

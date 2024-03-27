@@ -4,15 +4,16 @@ namespace Enhavo\Bundle\UserBundle\Controller;
 
 use Enhavo\Bundle\FormBundle\Error\FormErrorResolver;
 use Enhavo\Bundle\UserBundle\Configuration\ConfigurationProvider;
+use Enhavo\Bundle\UserBundle\Exception\ConfigurationException;
+use Enhavo\Bundle\UserBundle\Exception\TokenInvalidException;
 use Enhavo\Bundle\UserBundle\Form\Data\ResetPassword;
-use Enhavo\Bundle\UserBundle\Model\UserInterface;
 use Enhavo\Bundle\UserBundle\Repository\UserRepository;
 use Enhavo\Bundle\UserBundle\User\UserManager;
-use Sylius\Component\Resource\Factory\FactoryInterface;
+use Exception;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
@@ -21,41 +22,34 @@ use Symfony\Contracts\Translation\TranslatorInterface;
  */
 class ResetPasswordController extends AbstractUserController
 {
-    /** @var UserRepository */
-    private $userRepository;
-
-    /** @var FactoryInterface */
-    private $userFactory;
-
-    /** @var TranslatorInterface */
-    private $translator;
-
-    /** @var FormErrorResolver */
-    private $errorResolver;
+    private UserRepository $userRepository;
+    private TranslatorInterface $translator;
+    private FormErrorResolver $errorResolver;
 
     /**
      * ResetPasswordController constructor.
      * @param UserManager $userManager
      * @param ConfigurationProvider $provider
      * @param UserRepository $userRepository
-     * @param FactoryInterface $userFactory
      * @param TranslatorInterface $translator
      * @param FormErrorResolver $errorResolver
      */
-    public function __construct(UserManager $userManager, ConfigurationProvider $provider, UserRepository $userRepository, FactoryInterface $userFactory, TranslatorInterface $translator, FormErrorResolver $errorResolver)
+    public function __construct(UserManager $userManager, ConfigurationProvider $provider, UserRepository $userRepository, TranslatorInterface $translator, FormErrorResolver $errorResolver)
     {
         parent::__construct($userManager, $provider);
 
         $this->userRepository = $userRepository;
-        $this->userFactory = $userFactory;
         $this->translator = $translator;
         $this->errorResolver = $errorResolver;
     }
 
-    public function requestAction(Request $request)
+    /**
+     * @throws ConfigurationException
+     * @throws Exception
+     */
+    public function requestAction(Request $request): RedirectResponse|JsonResponse|Response
     {
-        $configKey = $this->getConfigKey($request);
-        $configuration = $this->provider->getResetPasswordRequestConfiguration($configKey);
+        $configuration = $this->provider->getResetPasswordRequestConfiguration();
 
         $form = $this->createForm($configuration->getFormClass(), null, $configuration->getFormOptions([
             'validation_groups' => ['exists', 'reset-password']
@@ -64,13 +58,12 @@ class ResetPasswordController extends AbstractUserController
         $form->handleRequest($request);
 
         $valid = true;
-        $message = null;
         if ($form->isSubmitted()) {
             if ($form->isValid()) {
 
                 /** @var ResetPassword $data */
                 $data = $form->getData();
-                $user = $this->userRepository->findByUsername($data->getUsername());
+                $user = $this->userRepository->loadUserByIdentifier($data->getUserIdentifier());
 
                 $message = $this->translator->trans('reset_password.flash.message.success', [], 'EnhavoUserBundle');
                 $this->addFlash('success', $message);
@@ -104,7 +97,7 @@ class ResetPasswordController extends AbstractUserController
             }
         }
 
-        $response = $this->render($this->getTemplate($configuration->getTemplate()), [
+        $response = $this->render($this->resolveTemplate($configuration->getTemplate()), [
             'form' => $form->createView(),
             'error' => !$valid,
             'errors' => [
@@ -123,23 +116,27 @@ class ResetPasswordController extends AbstractUserController
         return $response;
     }
 
-    public function checkAction(Request $request)
+    /**
+     * @throws ConfigurationException
+     */
+    public function checkAction(Request $request): Response
     {
-        $configKey = $this->getConfigKey($request);
-        $configuration = $this->provider->getResetPasswordCheckConfiguration($configKey);
+        $configuration = $this->provider->getResetPasswordCheckConfiguration();
 
-        return $this->render($this->getTemplate($configuration->getTemplate()));
+        return $this->render($this->resolveTemplate($configuration->getTemplate()));
     }
 
-    public function confirmAction(Request $request, $token)
+    /**
+     * @throws ConfigurationException
+     */
+    public function confirmAction(Request $request, $token): RedirectResponse|JsonResponse|Response
     {
-        $configKey = $this->getConfigKey($request);
-        $configuration = $this->provider->getResetPasswordConfirmConfiguration($configKey);
+        $configuration = $this->provider->getResetPasswordConfirmConfiguration();
 
         $user = $this->userRepository->findByConfirmationToken($token);
 
         if (null === $user) {
-            throw new NotFoundHttpException(sprintf('A user with confirmation token "%s" does not exist', $token));
+            throw new TokenInvalidException(sprintf('A user with confirmation token "%s" does not exist', $token));
         }
 
         $form = $this->createForm($configuration->getFormClass(), $user, $configuration->getFormOptions());
@@ -179,7 +176,7 @@ class ResetPasswordController extends AbstractUserController
             }
         }
 
-        $response = $this->render($this->getTemplate($configuration->getTemplate()), [
+        $response = $this->render($this->resolveTemplate($configuration->getTemplate()), [
             'user' => $user,
             'form' => $form->createView(),
             'error' => !$valid,
@@ -200,11 +197,13 @@ class ResetPasswordController extends AbstractUserController
         return $response;
     }
 
-    public function finishAction(Request $request)
+    /**
+     * @throws ConfigurationException
+     */
+    public function finishAction(Request $request): Response
     {
-        $configKey = $this->getConfigKey($request);
-        $configuration = $this->provider->getResetPasswordFinishConfiguration($configKey);
+        $configuration = $this->provider->getResetPasswordFinishConfiguration();
 
-        return $this->render($this->getTemplate($configuration->getTemplate()));
+        return $this->render($this->resolveTemplate($configuration->getTemplate()));
     }
 }

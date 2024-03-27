@@ -20,31 +20,22 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\FormFactory;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\Form\FormView;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\CallbackTransformer;
+use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 
 class FileType extends AbstractType
 {
-    /**
-     * @var FormFactory
-     */
-    protected $formFactory;
-
-    /**
-     * @var RepositoryInterface
-     */
-    protected $repository;
-
-    /**
-     * @var ExtensionManager
-     */
-    protected $extensionManager;
-
-    public function __construct($formFactory, RepositoryInterface $repository, ExtensionManager $extensionManager)
+    public function __construct(
+        private FormFactory $formFactory,
+        private RepositoryInterface $repository,
+        private ExtensionManager $extensionManager,
+        private NormalizerInterface $serializer,
+        private array $formConfiguration,
+    )
     {
-        $this->formFactory = $formFactory;
-        $this->repository = $repository;
-        $this->extensionManager = $extensionManager;
     }
 
     public function buildForm(FormBuilderInterface $builder, array $options)
@@ -53,16 +44,18 @@ class FileType extends AbstractType
         $repository = $this->repository;
         $formFactory = $this->formFactory;
 
+        $type = get_class($builder->getType()->getInnerType());
+
         $builder->addModelTransformer(new CallbackTransformer(
             function ($originalDescription) {
                 return $originalDescription;
             },
-            function ($submittedDescription) use (&$submitData, $repository, $formFactory, $options) {
+            function ($submittedDescription) use (&$submitData, $repository, $formFactory, $options, $type) {
                 if($submittedDescription instanceof FileInterface && $submittedDescription->getId() === null) {
                     $file = $repository->find($submitData['id']);
 
                     /** @var FormFactory $formFactory */
-                    $form = $formFactory->create(FileType::class, $file, $options);
+                    $form = $formFactory->create($type, $file, $options);
                     $form->submit($submitData);
                     /** @var FileInterface $file */
                     $file = $form->getData();
@@ -79,12 +72,12 @@ class FileType extends AbstractType
             function ($originalDescription) {
                 return $originalDescription;
             },
-            function ($submittedDescription) use (&$submitData, $repository, $formFactory, $options) {
+            function ($submittedDescription) use (&$submitData, $repository, $formFactory, $options, $type) {
                 if($submittedDescription instanceof FileInterface && $submittedDescription->getId() === null) {
                     $file = $repository->find($submitData['id']);
 
                     /** @var FormFactory $formFactory */
-                    $form = $formFactory->create(FileType::class, $file, $options);
+                    $form = $formFactory->create($type, $file, $options);
                     $form->submit($submitData);
                     /** @var FileInterface $file */
                     $file = $form->getData();
@@ -114,7 +107,6 @@ class FileType extends AbstractType
                     'data-media-item-id' => $data instanceof FileInterface ? $data->getId() : true
                 ],
                 'mapped' => false,
-                //'read_only' => true
             ]);
         });
 
@@ -134,13 +126,36 @@ class FileType extends AbstractType
         $this->extensionManager->buildForm($builder, $options);
     }
 
+    public function buildView(FormView $view, FormInterface $form, array $options)
+    {
+        $vueData = $view->vars['vue_data'];
+        if ($vueData) {
+            $vueData['file'] = $this->serializer->normalize($form->getData(), null, ['groups' => ['media', 'media_private']]);
+            if (isset($options['component_model'])) {
+                $vueData['componentModel'] = $options['component_model'];
+            } else if (!isset($vueData['componentModel'])) {
+                $vueData['componentModel'] = 'MediaItemForm';
+            }
+        }
+    }
+
+    public function finishView(FormView $view, FormInterface $form, array $options)
+    {
+        if (isset($view->children['parameters'])) {
+            foreach ($view->children['parameters'] as $child) {
+                $child->vars['attr'] = $child->vars['attr'] ?: [];
+                $child->vars['attr']['data-parameter-key'] = $child->vars['name'];
+            }
+        }
+    }
+
     /**
      * @param OptionsResolver $resolver
      */
     public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults([
-            'parameters_type' => FileParametersType::class,
+            'parameters_type' => $this->formConfiguration['parameters_type'],
             'parameters_options' => [],
             'data_class' => File::class,
             'extensions' => []

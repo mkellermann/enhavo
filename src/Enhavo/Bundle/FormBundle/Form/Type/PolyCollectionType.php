@@ -24,16 +24,10 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
  */
 class PolyCollectionType extends AbstractType
 {
-    /** @var PrototypeManager */
-    private $prototypeManager;
-
-    /**
-     * PolyCollectionType constructor.
-     * @param PrototypeManager $prototypeManager
-     */
-    public function __construct(PrototypeManager $prototypeManager)
+    public function __construct(
+        private PrototypeManager $prototypeManager
+    )
     {
-        $this->prototypeManager = $prototypeManager;
     }
 
     /**
@@ -88,6 +82,7 @@ class PolyCollectionType extends AbstractType
         $view->vars['allow_add'] = $options['allow_add'];
         $view->vars['allow_delete'] = $options['allow_delete'];
         $view->vars['add_label'] = $options['add_label'];
+        $view->vars['entry_labels'] = $this->buildEntryLabels($options);
 
         $view->vars['poly_collection_config'] = [
             'entryKeys' => $this->buildEntryKeys($options),
@@ -112,6 +107,19 @@ class PolyCollectionType extends AbstractType
         return $keys;
     }
 
+    private function buildEntryLabels(array $options)
+    {
+        $choices = [];
+        foreach ($options['entry_types_options'] as $key => $entryTypeOption) {
+            $choices[] = [
+                'key' => $key,
+                'label' => $entryTypeOption['label']
+            ];
+        }
+        return $choices;
+    }
+
+
     /**
      * {@inheritdoc}
      */
@@ -134,8 +142,8 @@ class PolyCollectionType extends AbstractType
     public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults([
-            'allow_add' => false,
-            'allow_delete' => false,
+            'allow_add' => true,
+            'allow_delete' => true,
             'collapsed' => false,
             'prototype' => true,
             'prototype_name' => '__name__',

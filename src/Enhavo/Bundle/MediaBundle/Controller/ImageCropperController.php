@@ -8,71 +8,49 @@
 
 namespace Enhavo\Bundle\MediaBundle\Controller;
 
-use Enhavo\Bundle\AppBundle\Viewer\ViewFactory;
-use Enhavo\Bundle\MediaBundle\Media\ImageCropperManager;
+use Doctrine\ORM\EntityManagerInterface;
+use Enhavo\Bundle\AppBundle\Resource\ResourceManager;
+use Enhavo\Bundle\MediaBundle\Media\FormatManager;
 use Enhavo\Bundle\MediaBundle\Media\MediaManager;
-use FOS\RestBundle\View\ViewHandler;
+use Enhavo\Component\Type\FactoryInterface;
+use Sylius\Bundle\ResourceBundle\Controller\RequestConfigurationFactoryInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class ImageCropperController extends AbstractController
 {
-    /**
-     * @var ImageCropperManager
-     */
-    private $imageCropperManager;
-
-    /**
-     * @var MediaManager
-     */
-    private $mediaManager;
-
-    /**
-     * @var ViewFactory
-     */
-    private $viewFactory;
-
-    /**
-     * @var ViewHandler
-     */
-    private $viewHandler;
-
-    /**
-     * ImageCropperController constructor.
-     * @param ImageCropperManager $imageCropperManager
-     * @param MediaManager $mediaManager
-     * @param ViewFactory $viewFactory
-     * @param ViewHandler $viewHandler
-     */
     public function __construct(
-        ImageCropperManager $imageCropperManager,
-        MediaManager $mediaManager,
-        ViewFactory $viewFactory,
-        ViewHandler $viewHandler
+        private ResourceManager $resourceManager,
+        private RequestConfigurationFactoryInterface $requestConfigurationFactory,
+        private MediaManager $mediaManager,
+        private FactoryInterface $viewFactory,
+        private FormatManager $formatManager,
+        private TranslatorInterface $translator,
+        private EntityManagerInterface $entityManager
     ) {
-        $this->imageCropperManager = $imageCropperManager;
-        $this->mediaManager = $mediaManager;
-        $this->viewFactory = $viewFactory;
-        $this->viewHandler = $viewHandler;
     }
 
     public function indexAction(Request $request)
     {
+        $configuration = $this->requestConfigurationFactory->create($this->resourceManager->getMetadata('enhavo_media', 'file'), $request);
+
         $format = $this->getFormat($request);
 
         if($request->getMethod() == Request::METHOD_POST) {
             $this->cropFormat($request);
-            $this->addFlash('success', $this->get('translator')->trans('media.image_cropper.message.save', [], 'EnhavoMediaBundle'));
+            $this->addFlash('success', $this->translator->trans('media.image_cropper.message.save', [], 'EnhavoMediaBundle'));
         }
 
-        $view = $this->viewFactory->create('image_cropper', [
+        $view = $this->viewFactory->create([
+            'type' => 'image_cropper',
+            'request_configuration' => $configuration,
             'format' => $format,
         ]);
 
-        return $this->viewHandler->handle($view);
+        return $view->getResponse($request);
     }
-    
+
     private function cropFormat(Request $request)
     {
         $height = intval($request->get('height'));
@@ -92,10 +70,9 @@ class ImageCropperController extends AbstractController
         $parameters['cropY'] = $y;
 
         $format->setParameters($parameters);
-        $this->container->get('doctrine.orm.entity_manager')->flush();
+        $this->entityManager->flush();
 
-        $formatManager = $this->get('enhavo_media.media.format_manager');
-        $formatManager->applyFormat($format->getFile(), $format->getName(), $parameters);
+        $this->formatManager->applyFormat($format->getFile(), $format->getName(), $parameters);
     }
 
     /**

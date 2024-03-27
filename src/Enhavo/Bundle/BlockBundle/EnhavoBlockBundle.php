@@ -9,11 +9,11 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Enhavo\Component\Type\TypeCompilerPass;
 use Symfony\Component\DependencyInjection\Definition;
 use Doctrine\Bundle\DoctrineBundle\DependencyInjection\Compiler\DoctrineOrmMappingsPass;
-use Doctrine\Common\Persistence\Mapping\Driver\DefaultFileLocator;
+use Doctrine\Persistence\Mapping\Driver\DefaultFileLocator;
 
 class EnhavoBlockBundle extends Bundle
 {
-    public function build(ContainerBuilder $container)
+    public function build(ContainerBuilder $container): void
     {
         parent::build($container);
         $container->addCompilerPass($this->buildDoctrineBlockCompilerPass(

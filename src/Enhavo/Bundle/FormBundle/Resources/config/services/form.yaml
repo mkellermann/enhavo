@@ -59,6 +59,12 @@ services:
         tags:
             - { name: form.type }
 
+    Enhavo\Bundle\FormBundle\Form\Type\ConditionalType:
+        arguments:
+            - '@Enhavo\Bundle\VueFormBundle\Form\VueForm'
+        tags:
+            - { name: form.type }
+
     Enhavo\Bundle\FormBundle\Form\Extension\ChoiceTypeExtension:
         tags:
             - { name: form.type_extension, extended_type: Symfony\Component\Form\Extension\Core\Type\ChoiceType }
@@ -68,10 +74,6 @@ services:
             - { name: form.type_extension, extended_type: Symfony\Bridge\Doctrine\Form\Type\EntityType }
 
     Enhavo\Bundle\FormBundle\Form\Extension\ConditionTypeExtension:
-        tags:
-            - { name: form.type_extension, extended_type: Symfony\Component\Form\Extension\Core\Type\FormType }
-
-    Enhavo\Bundle\FormBundle\Form\Extension\HelpExtension:
         tags:
             - { name: form.type_extension, extended_type: Symfony\Component\Form\Extension\Core\Type\FormType }
 

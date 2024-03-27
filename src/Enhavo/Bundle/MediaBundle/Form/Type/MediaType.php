@@ -8,10 +8,10 @@
 
 namespace Enhavo\Bundle\MediaBundle\Form\Type;
 
+use Enhavo\Bundle\FormBundle\Form\Type\ListType;
 use Enhavo\Bundle\MediaBundle\Media\ExtensionManager;
 use Enhavo\Bundle\MediaBundle\Model\FileInterface;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
@@ -21,19 +21,11 @@ use Symfony\Component\Form\FormInterface;
 
 class MediaType extends AbstractType
 {
-    /**
-     * @var ExtensionManager
-     */
-    private $extensionManager;
-
-    /**
-     * MediaType constructor.
-     *
-     * @param ExtensionManager $extensionManager
-     */
-    public function __construct(ExtensionManager $extensionManager)
+    public function __construct(
+        private ExtensionManager $extensionManager,
+        private array $formConfiguration,
+    )
     {
-        $this->extensionManager = $extensionManager;
     }
 
     public function buildForm(FormBuilderInterface $builder, array $options)
@@ -69,12 +61,14 @@ class MediaType extends AbstractType
         $view->vars['upload'] = $options['upload'];
         $view->vars['extensionManager'] = $this->extensionManager;
         $view->vars['extensions'] = $options['extensions'];
+        $view->vars['route'] = $options['route'];
         $view->vars['mediaConfig'] = [
             'multiple' => $options['multiple'],
             'sortable' =>  $options['multiple'] ? $options['sortable'] : false,
             'extensions' => $view->vars['extensions'],
             'upload' => $options['upload'],
             'edit' => $options['edit'],
+            'prototypeName' => $options['prototype_name'],
         ];
     }
 
@@ -119,8 +113,10 @@ class MediaType extends AbstractType
             'prototype_data' => null,
             'prototype_name' => '__name__',
             'item_template' => '@EnhavoMedia/admin/form/media/item.html.twig',
-            'upload' => true,
-            'extensions' => []
+            'upload' => $this->formConfiguration['default_upload_enabled'],
+            'extensions' => [],
+            'route' => 'enhavo_media_upload',
+            'error_bubbling' => false,
         ));
     }
 
@@ -131,6 +127,6 @@ class MediaType extends AbstractType
 
     public function getParent()
     {
-        return CollectionType::class;
+        return ListType::class;
     }
 }

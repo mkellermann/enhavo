@@ -10,116 +10,77 @@ namespace Enhavo\Bundle\SearchBundle\Engine\DatabaseSearch;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Enhavo\Bundle\DoctrineExtensionBundle\EntityResolver\EntityResolverInterface;
-use Enhavo\Bundle\SearchBundle\Engine\EngineInterface;
+use Enhavo\Bundle\SearchBundle\Engine\Result\EntitySubjectLoader;
+use Enhavo\Bundle\SearchBundle\Engine\Result\ResultEntry;
+use Enhavo\Bundle\SearchBundle\Engine\Result\ResultSummary;
+use Enhavo\Bundle\SearchBundle\Engine\SearchEngineInterface;
 use Enhavo\Bundle\SearchBundle\Engine\Filter\Filter;
-use Enhavo\Bundle\SearchBundle\Filter\FilterData;
+use Enhavo\Bundle\SearchBundle\Filter\FilterDataProvider;
+use Enhavo\Bundle\SearchBundle\Index\IndexData;
 use Enhavo\Bundle\SearchBundle\Metadata\Metadata;
 use Enhavo\Bundle\SearchBundle\Model\Database\DataSet;
 use Enhavo\Bundle\SearchBundle\Model\Database\Index;
-use Enhavo\Bundle\SearchBundle\Extractor\Extractor;
-use Enhavo\Bundle\SearchBundle\Indexer\Indexer;
+use Enhavo\Bundle\SearchBundle\Index\IndexDataProvider;
 use Enhavo\Bundle\SearchBundle\Model\Database\Total;
 use Enhavo\Bundle\SearchBundle\Repository\IndexRepository;
 use Enhavo\Bundle\SearchBundle\Repository\TotalRepository;
 use Enhavo\Bundle\SearchBundle\Util\TextSimplify;
 use Enhavo\Bundle\SearchBundle\Util\TextToWord;
 use Enhavo\Component\Metadata\MetadataRepository;
+use Pagerfanta\Adapter\ArrayAdapter;
 use Pagerfanta\Pagerfanta;
 
-class DatabaseSearchEngine implements EngineInterface
+class DatabaseSearchEngine implements SearchEngineInterface
 {
-    /**
-     * @var Indexer
-     */
-    private $indexer;
-
-    /**
-     * @var MetadataRepository
-     */
-    private $metadataRepository;
-
-    /**
-     * @var EntityManagerInterface
-     */
-    private $em;
-
-    /**
-     * @var Extractor
-     */
-    private $extractor;
-
-    /**
-     * @var TextToWord
-     */
-    private $splitter;
-
-    /**
-     * @var TextSimplify
-     */
-    private $simplifier;
-
-    /**
-     * @var EntityResolverInterface
-     */
-    private $entityResolver;
-
-    /**
-     * @var FilterData
-     */
-    private $filterData;
-
-    /**
-     * @var string[]
-     */
-    private $classes;
-
-    /** @var bool */
-    private $indexing;
-
     public function __construct(
-        Indexer $indexer,
-        MetadataRepository $metadataRepository,
-        EntityManagerInterface $em,
-        Extractor $extractor,
-        TextToWord $splitter,
-        TextSimplify $simplifier,
-        EntityResolverInterface $entityResolver,
-        FilterData $filterData,
-        $classes,
-        $indexing
+        private IndexDataProvider $indexDataProvider,
+        private MetadataRepository $metadataRepository,
+        private EntityManagerInterface $em,
+        private TextToWord $splitter,
+        private TextSimplify $simplifier,
+        private EntityResolverInterface $entityResolver,
+        private FilterDataProvider $filterDataProvider,
+        private $classes,
     ) {
-        $this->indexer = $indexer;
-        $this->metadataRepository = $metadataRepository;
-        $this->em = $em;
-        $this->extractor = $extractor;
-        $this->splitter = $splitter;
-        $this->simplifier = $simplifier;
-        $this->entityResolver = $entityResolver;
-        $this->filterData = $filterData;
-        $this->classes = $classes;
-        $this->indexing = $indexing;
     }
 
-    public function search(Filter $filter)
+    public function search(Filter $filter): ResultSummary
     {
         $searchFilter = $this->createSearchFilter($filter);
         $repository = $this->em->getRepository(Index::class);
-
         $searchResults = $repository->getSearchResults($searchFilter);
-        $result = [];
-        foreach($searchResults as $searchResult) {
-            $result[] = $this->entityResolver->getEntity($searchResult['id'], $searchResult['class']);
-        }
 
-        return $result;
+        $entries = $this->getSearchEntries($searchResults);
+        $summary = new ResultSummary($entries, count($entries));
+        return $summary;
     }
 
-    public function searchPaginated(Filter $filter)
+    private function getSearchEntries($searchResults)
+    {
+        $entries = [];
+        foreach ($searchResults as $searchResult) {
+            $id = $searchResult['id'];
+            $className = $searchResult['class'];
+            $entries[] = new ResultEntry(new EntitySubjectLoader($this->entityResolver, $className, $id), [], null);
+        }
+        return $entries;
+    }
+
+    public function suggest(Filter $filter): array
+    {
+        return [];
+    }
+
+    public function searchPaginated(Filter $filter): ResultSummary
     {
         $searchFilter = $this->createSearchFilter($filter);
         $repository = $this->em->getRepository(Index::class);
-        $searchQuery = $repository->createSearchQuery($searchFilter);
-        return new Pagerfanta(new DatabaseSearchAdapter($searchQuery, $this->entityResolver));
+        $searchResults = $repository->getSearchResults($searchFilter);
+
+        $entries = $this->getSearchEntries($searchResults);
+        $pagerfanta = new Pagerfanta(new ArrayAdapter($entries));
+        $summary = new ResultSummary($pagerfanta, count($entries));
+        return $summary;
     }
 
     private function createSearchFilter(Filter $filter)
@@ -146,17 +107,13 @@ class DatabaseSearchEngine implements EngineInterface
 
     public function index($resource, $locale = null)
     {
-        if (!$this->indexing) {
-            return;
-        }
-
         /** @var Metadata $metadata */
         $metadata = $this->metadataRepository->getMetadata($resource);
         if($metadata && in_array($metadata->getClassName(), $this->classes)) {
             $dataSet = $this->findDataSetOrCreateNew($resource);
             $dataSet->resetIndex();
             $dataSet->resetFilter();
-            $indexes = $this->indexer->getIndexes($resource);
+            $indexes = $this->indexDataProvider->getIndexData($resource);
 
             $dataSetIndexes = $this->createIndexes($indexes);
             foreach($dataSetIndexes as $index) {
@@ -176,7 +133,7 @@ class DatabaseSearchEngine implements EngineInterface
     }
 
     /**
-     * @param \Enhavo\Bundle\SearchBundle\Indexer\Index[] $indexes
+     * @param IndexData[] $indexes
      * @return Index[]
      */
     private function createIndexes(array $indexes)
@@ -206,7 +163,7 @@ class DatabaseSearchEngine implements EngineInterface
     private function createFilters($resource)
     {
         $results = [];
-        $filterData = $this->filterData->getData($resource);
+        $filterData = $this->filterDataProvider->getFilterData($resource);
         foreach($filterData as $data) {
             $filter = new \Enhavo\Bundle\SearchBundle\Model\Database\Filter();
             $filter->setKey($data->getKey());
@@ -224,7 +181,7 @@ class DatabaseSearchEngine implements EngineInterface
         $focus = 1;
         $minimumWordSize = 3;
         $i = 0;
-        foreach($indexes as $index) {
+        foreach ($indexes as $index) {
             if (is_numeric($index->getWord()) || strlen($index->getWord()) >= $minimumWordSize) {
                 $i++;
                 $index->setScore($index->getScore() + ($index->getWeight() * $focus));
@@ -313,8 +270,17 @@ class DatabaseSearchEngine implements EngineInterface
         }
     }
 
-    public function initialize()
+    public function initialize($force = false)
     {
         // nothing to do here
+    }
+
+    public static function supports($dsn): bool
+    {
+        if (str_starts_with($dsn, 'database://')) {
+            return true;
+        }
+
+        return false;
     }
 }

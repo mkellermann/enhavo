@@ -38,7 +38,7 @@ class ListType extends AbstractType
         // reorder if origin was array
         $builder->addEventListener(FormEvents::PRE_SUBMIT, function (FormEvent $event) use (&$data){
             $item = $event->getData();
-            if(is_array($data) && is_array($item)) {
+            if((is_array($data) || $data === null) && is_array($item)) {
                 $itemKeys = array_keys($item);
                 $copyValues = array_values($item);
                 sort($itemKeys);
@@ -54,7 +54,7 @@ class ListType extends AbstractType
         // reindex data, so array starts with index 0
         $builder->addEventListener(FormEvents::SUBMIT, function (FormEvent $event) use (&$data){
             $items = $event->getData();
-            if(is_array($data) && is_array($items)) {
+            if((is_array($data) || $data === null) && is_array($items)) {
                 $result = [];
                 $i = 0;
                 foreach($items as $item) {
@@ -77,6 +77,9 @@ class ListType extends AbstractType
         $view->vars['allow_delete'] = $options['allow_delete'];
         $view->vars['allow_add'] = $options['allow_add'];
         $view->vars['block_name'] = $options['block_name'];
+        $view->vars['draggable_group'] = $options['draggable_group'];
+        $view->vars['draggable_handle'] = $options['draggable_handle'];
+
         $lastIndex = null;
         $array = $form->getData();
         if ($array instanceof Collection) {
@@ -84,7 +87,7 @@ class ListType extends AbstractType
         }
         if($array != null) {
             end($array);
-            $lastIndex = key($array);
+            $lastIndex = intval(key($array));
         } else {
             $lastIndex = -1;
         }
@@ -117,7 +120,9 @@ class ListType extends AbstractType
             'prototype' => true,
             'allow_add' => true,
             'by_reference' => false,
-            'allow_delete' => true
+            'allow_delete' => true,
+            'draggable_group' => null,
+            'draggable_handle' => '.drag-button',
         ));
 
         $resolver->setNormalizer('prototype_name', function(Options $options, $value) {

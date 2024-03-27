@@ -8,7 +8,10 @@
 
 namespace Enhavo\Component\Type\Tests;
 
+use Enhavo\Component\Type\AbstractTypeExtension;
 use Enhavo\Component\Type\AbstractType;
+use Enhavo\Component\Type\Exception\TypeNotFoundException;
+use Enhavo\Component\Type\Exception\TypeNotValidException;
 use Enhavo\Component\Type\Registry;
 use Enhavo\Component\Type\TypeInterface;
 use PHPUnit\Framework\TestCase;
@@ -74,22 +77,20 @@ class RegistryTest extends TestCase
         $this->assertEquals('root', $type::getName());
     }
 
-    /**
-     * @expectedException \Enhavo\Component\Type\Exception\TypeNotFoundException
-     */
     public function testNotFound()
     {
+        $this->expectException(TypeNotFoundException::class);
+
         $dependencies = $this->createDependencies();
         $registry = $this->createInstance($dependencies);
         $registry->register(RootType::class, 'root_type_id');
         $registry->getType('type_not_exists');
     }
 
-    /**
-     * @expectedException \Enhavo\Component\Type\Exception\TypeNotValidException
-     */
     public function testCircularDetection()
     {
+        $this->expectException(TypeNotValidException::class);
+
         $dependencies = $this->createDependencies();
         $registry = $this->createInstance($dependencies);
         $registry->register(CircularTypeOne::class, CircularTypeOne::class);
@@ -97,21 +98,19 @@ class RegistryTest extends TestCase
         $registry->register(CircularTypeThree::class, CircularTypeThree::class);
     }
 
-    /**
-     * @expectedException \Enhavo\Component\Type\Exception\TypeNotValidException
-     */
     public function testSelfCircularDetection()
     {
+        $this->expectException(TypeNotValidException::class);
+
         $dependencies = $this->createDependencies();
         $registry = $this->createInstance($dependencies);
         $registry->register(SelfReference::class, SelfReference::class);
     }
 
-    /**
-     * @expectedException \Enhavo\Component\Type\Exception\TypeNotValidException
-     */
     public function testMissingInterface()
     {
+        $this->expectException(TypeNotValidException::class);
+
         $dependencies = $this->createDependencies();
         $registry = $this->createInstance($dependencies);
         $registry->register(NoInterface::class, NoInterface::class);
@@ -127,46 +126,86 @@ class RegistryTest extends TestCase
         $registry->register(IndirectClass::class, IndirectClass::class);
     }
 
-    /**
-     * @expectedException \Enhavo\Component\Type\Exception\TypeNotValidException
-     */
     public function testParentClassInterface()
     {
+        $this->expectException(TypeNotValidException::class);
+
         $dependencies = $this->createDependencies();
         $registry = $this->createInstance($dependencies);
         $registry->register(ParentNotExitsType::class, ParentNotExitsType::class);
     }
 
-    /**
-     * @expectedException \Enhavo\Component\Type\Exception\TypeNotValidException
-     */
     public function testInvalidParent()
     {
+        $this->expectException(TypeNotValidException::class);
+
         $dependencies = $this->createDependencies();
         $registry = $this->createInstance($dependencies);
         $registry->register(InvalidParentType::class, InvalidParentType::class);
     }
 
-    /**
-     * @expectedException \Enhavo\Component\Type\Exception\TypeNotValidException
-     */
     public function testDoubleClassNames()
     {
+        $this->expectException(TypeNotValidException::class);
+
         $dependencies = $this->createDependencies();
         $registry = $this->createInstance($dependencies);
         $registry->register(TestType::class, TestType::class);
         $registry->register(TestType::class, TestType::class);
     }
 
-    /**
-     * @expectedException \Enhavo\Component\Type\Exception\TypeNotValidException
-     */
     public function testDoubleNames()
     {
+        $this->expectException(TypeNotValidException::class);
+
         $dependencies = $this->createDependencies();
         $registry = $this->createInstance($dependencies);
         $registry->register(TestType::class, TestType::class);
         $registry->register(OtherTestType::class, OtherTestType::class);
+    }
+
+    public function testRegisterExtension()
+    {
+        $dependencies = $this->createDependencies();
+        $testExtensionType = new TestExtensionType();
+        $testOtherExtensionType = new TestOtherExtensionType();
+        $dependencies->container->method('get')->willReturnCallback(function($id) use ($testExtensionType, $testOtherExtensionType) {
+            return match ($id) {
+                $testExtensionType::class => $testExtensionType,
+                $testOtherExtensionType::class => $testOtherExtensionType,
+                default => null,
+            };
+        });
+
+        $registry = $this->createInstance($dependencies);
+        $registry->register(TestType::class, TestType::class);
+        $registry->registerExtension(TestExtensionType::class, TestExtensionType::class, 1);
+        $registry->registerExtension(TestOtherExtensionType::class, TestOtherExtensionType::class, 3);
+
+        $testType = new TestType();
+        $extensions = $registry->getExtensions($testType);
+
+        $this->assertCount(2, $extensions);
+        $this->assertTrue($extensions[0] instanceof TestOtherExtensionType);
+        $this->assertTrue($extensions[1] instanceof TestExtensionType);
+    }
+
+    public function testRegisterExtensionWithWrongInterface()
+    {
+        $this->expectException(TypeNotValidException::class);
+
+        $dependencies = $this->createDependencies();
+        $registry = $this->createInstance($dependencies);
+        $registry->registerExtension(TestType::class, TestType::class);
+    }
+
+    public function testRegisterExtensionWithNotExistingExtendedType()
+    {
+        $this->expectException(TypeNotValidException::class);
+
+        $dependencies = $this->createDependencies();
+        $registry = $this->createInstance($dependencies);
+        $registry->registerExtension(TestExtensionType::class, TestExtensionType::class);
     }
 }
 
@@ -193,6 +232,22 @@ class TestType extends AbstractType
     public static function getName(): ?string
     {
         return 'test';
+    }
+}
+
+class TestExtensionType extends AbstractTypeExtension
+{
+    public static function getExtendedTypes(): array
+    {
+        return [TestType::class];
+    }
+}
+
+class TestOtherExtensionType extends AbstractTypeExtension
+{
+    public static function getExtendedTypes(): array
+    {
+        return [TestType::class];
     }
 }
 

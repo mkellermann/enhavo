@@ -3,20 +3,20 @@ const EnhavoThemeEncore = require('./assets/node_modules/@enhavo/theme/encore/En
 const ThemeLoader = require('./assets/node_modules/@enhavo/theme/encore/ThemeLoader');
 const AppPackage = require('./assets/node_modules/@enhavo/app/encore/AppPackage');
 const FormPackage = require('./assets/node_modules/@enhavo/form/encore/FormPackage');
+const ApiPackage = require('./assets/node_modules/@enhavo/api/encore/ApiPackage');
 
 EnhavoEncore.add(
     'enhavo',
     [
         new AppPackage(),
+        new ApiPackage(),
         new FormPackage(),
     ],
     Encore => {},
     config => {
         // Enable watch in enhavo assets/node_modules/@enhavo
         config.watchOptions = {
-            ignored: [
-                /node_modules([\\]+|\/)+(?!@enhavo)/,
-            ]
+            ignored: /node_modules([\\]+|\/)+(?!@enhavo)/
         }
     }
 );

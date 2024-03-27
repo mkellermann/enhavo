@@ -1,22 +1,21 @@
 <?php
 namespace Enhavo\Bundle\SearchBundle\EventListener;
 
-use Enhavo\Bundle\SearchBundle\Engine\EngineInterface;
-use Symfony\Component\DependencyInjection\ContainerAwareTrait;
-use Symfony\Component\EventDispatcher\GenericEvent;
+use Enhavo\Bundle\AppBundle\Event\ResourceEvent;
+use Enhavo\Bundle\SearchBundle\Engine\SearchEngineInterface;
 
 class DeleteListener
 {
-    use ContainerAwareTrait;
-
-    public function onDelete(GenericEvent $event)
+    public function __construct(
+        private readonly SearchEngineInterface $searchEngine
+    )
     {
-        if($this->container->getParameter('enhavo_search.search.indexing')) {
-            //get the right index engine
-            $engine = $this->container->getParameter('enhavo_search.search.engine');
-            /** @var EngineInterface $indexEngine */
-            $indexEngine = $this->container->get($engine);
-            $indexEngine->removeIndex($event->getSubject());
-        }
+    }
+
+    public function onDelete(ResourceEvent $event)
+    {
+
+        $this->searchEngine->removeIndex($event->getSubject());
+
     }
 }

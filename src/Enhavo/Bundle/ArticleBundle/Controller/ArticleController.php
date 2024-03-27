@@ -2,56 +2,24 @@
 
 namespace Enhavo\Bundle\ArticleBundle\Controller;
 
-use Enhavo\Bundle\AppBundle\Template\TemplateTrait;
+
+use Enhavo\Bundle\AppBundle\Controller\ResourceController;
+use Enhavo\Bundle\AppBundle\Template\TemplateResolverTrait;
+use Enhavo\Bundle\ArticleBundle\Endpoint\ArticleEndpointType;
 use Enhavo\Bundle\ArticleBundle\Entity\Article;
-use Enhavo\Bundle\CommentBundle\Comment\CommentManager;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
-class ArticleController extends AbstractController
+class ArticleController extends ResourceController
 {
-    use TemplateTrait;
+    use TemplateResolverTrait;
 
-    /** @var CommentManager */
-    private $commentManager;
-
-    /**
-     * ArticleController constructor.
-     * @param CommentManager $commentManager
-     */
-    public function __construct(CommentManager $commentManager)
+    public function showResourceAction(Article $contentDocument, Request $request, bool $preview = false): Response
     {
-        $this->commentManager = $commentManager;
-    }
-
-    public function showResourceAction(Article $contentDocument, Request $request, bool $preview = false)
-    {
-        if (!$contentDocument->isPublished() && !$preview) {
-            throw $this->createNotFoundException();
-        }
-
-        $context = $this->commentManager->handleSubmitForm($request, $contentDocument);
-        if($context->isInsert()) {
-            $this->redirect($request->getRequestUri());
-        }
-
-        return $this->render($this->getTemplate('theme/resource/article/show.html.twig'), array(
+        return $this->createEndpointResponse($request, [
+            'type' => ArticleEndpointType::class,
             'resource' => $contentDocument,
-            'commentForm' => $context->getForm()
-        ));
-    }
-
-    public function showAction(Request $request)
-    {
-        /** @var Article $article */
-        $article = $this->get('enhavo_article.repository.article')->findOneBy([
-            'slug' => $request->get('slug')
+            'preview' => $preview,
         ]);
-
-        if($article === null) {
-            throw $this->createNotFoundException();
-        }
-
-        return $this->showResourceAction($article, $request);
     }
 }

@@ -9,14 +9,15 @@
 
 namespace Enhavo\Bundle\ShopBundle\Form\Type;
 
-use
-    Enhavo\Bundle\FormBundle\Form\Type\BooleanType;
+use Enhavo\Bundle\FormBundle\Form\Type\BooleanType;
 use Enhavo\Bundle\FormBundle\Form\Type\CurrencyType;
 use Enhavo\Bundle\FormBundle\Form\Type\ListType;
+use Enhavo\Bundle\FormBundle\Form\Type\WysiwygType;
 use Enhavo\Bundle\MediaBundle\Form\Type\MediaType;
 use Enhavo\Bundle\RoutingBundle\Form\Type\RouteType;
 use Enhavo\Bundle\ShopBundle\Entity\Product;
-use Sylius\Bundle\ProductBundle\Form\Type\ProductAttributeValueType;
+use Enhavo\Bundle\TaxonomyBundle\Form\Type\TermAutoCompleteChoiceType;
+use Enhavo\Bundle\TaxonomyBundle\Form\Type\TermTreeChoiceType;
 use Sylius\Bundle\ShippingBundle\Form\Type\ShippingCategoryChoiceType;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
@@ -30,28 +31,15 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class ProductType extends AbstractType
 {
-    /** @var string */
-    private $dataClass;
-
-    /** @var string */
-    private $taxRateClass;
-
-    /** @var string */
-    private $optionClass;
-
     /** @var int */
     private $productId;
 
-    /** @var EventSubscriberInterface */
-    private $generateProductVariantsSubscriber;
-
-    public function __construct($dataClass, $taxRateClass, $optionClass, $generateProductVariants)
-    {
-        $this->dataClass = $dataClass;
-        $this->taxRateClass = $taxRateClass;
-        $this->optionClass = $optionClass;
-        $this->generateProductVariantsSubscriber = $generateProductVariants;
-    }
+    public function __construct(
+        private string $dataClass,
+        private string $taxCategoryClass,
+        private string $optionClass,
+        private EventSubscriberInterface $generateProductVariants
+    ) {}
 
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
@@ -64,13 +52,18 @@ class ProductType extends AbstractType
                 }
             })
         ;
-        $builder->add('active', BooleanType::class, array(
+        $builder->add('enabled', BooleanType::class, array(
             'label' => 'product.form.label.active',
             'translation_domain' => 'EnhavoShopBundle',
         ));
 
         $builder->add('title', TextType::class, array(
             'label' => 'product.form.label.title',
+            'translation_domain' => 'EnhavoShopBundle',
+        ));
+
+        $builder->add('description', WysiwygType::class, array(
+            'label' => 'product.form.label.description',
             'translation_domain' => 'EnhavoShopBundle',
         ));
 
@@ -90,6 +83,9 @@ class ProductType extends AbstractType
         $builder->add('code', TextType::class, array(
             'label' => 'product.form.label.code',
             'translation_domain' => 'EnhavoShopBundle',
+            'attr' => array(
+                'readonly' => true,
+            ),
         ));
 
         $builder->add('price', CurrencyType::class, array(
@@ -174,16 +170,17 @@ class ProductType extends AbstractType
 
         $builder->add('route', RouteType::class);
 
-        $builder->add('taxRate', EntityType::class, array(
-            'class' => $this->taxRateClass,
+        $builder->add('taxCategory', EntityType::class, array(
+            'class' => $this->taxCategoryClass,
             'choice_label' => 'name',
-            'label' => 'product.form.label.taxRate',
+            'label' => 'product.form.label.taxCategory',
             'translation_domain' => 'EnhavoShopBundle',
+            'placeholder' => '---',
         ));
 
         $builder->add('options', EntityType::class, array(
             'class' => $this->optionClass,
-            'choice_label' => 'code',
+            'choice_label' => 'translation.name',
             'label' => 'product.label.options',
             'multiple' => true,
             'translation_domain' => 'EnhavoShopBundle',
@@ -199,6 +196,7 @@ class ProductType extends AbstractType
             'label' => 'product.form.label.attributes',
             'translation_domain' => 'EnhavoShopBundle'
         ]);
+
         $builder->add('associations', ListType::class, [
             'entry_type' => ProductAssociationType::class,
             'required' => false,
@@ -213,13 +211,19 @@ class ProductType extends AbstractType
             ]
         ]);
 
-//        $builder->add('variants', ListType::class, [
-//            'entry_type' => ProductVariantGenerationType::class,
-//            'allow_add' => false,
-//            'allow_delete' => true,
-//            'by_reference' => false,
-//        ]);
-//        $builder->addEventSubscriber($this->generateProductVariantsSubscriber);
+        $builder->add('categories', TermTreeChoiceType::class, [
+            'multiple' => true,
+            'taxonomy' => 'shop_category'
+        ]);
+
+        $builder->add('tags', TermAutoCompleteChoiceType::class, [
+            'multiple' => true,
+            'route' => 'enhavo_shop_tag_auto_complete',
+            'translation_domain' => 'EnhavoShopBundle',
+            'create_route' => 'enhavo_shop_tag_create',
+            'edit_route' => 'enhavo_shop_tag_update',
+            'view_key' => 'shop_tags'
+        ]);
     }
 
     public function configureOptions(OptionsResolver $resolver)

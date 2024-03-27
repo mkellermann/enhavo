@@ -2,55 +2,40 @@
 
 namespace Enhavo\Bundle\UserBundle\Model;
 
+use DateTime;
 use Doctrine\Common\Collections\ArrayCollection;
+use Enhavo\Bundle\AppBundle\Model\Timestampable;
+use Enhavo\Bundle\AppBundle\Model\TimestampableTrait;
 use Sylius\Component\Resource\Model\ResourceInterface;
+use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 
-class User implements UserInterface, GroupableInterface, ResourceInterface
+class User implements UserInterface
 {
-    /** @var int|null */
-    private $id;
+    use TimestampableTrait;
 
-    /** @var string|null */
-    private $firstName;
-
-    /** @var string|null */
-    private $lastName;
-
-    /** @var bool */
-    private $enabled = false;
-
-    /** @var bool */
-    private $verified = false;
-
-    /** @var string|null */
-    private $username;
-
-    /** @var string|null */
-    private $email;
-
-    /** @var string|null */
-    private $salt;
-
-    /** @var string */
-    private $password;
-
-    /** @var string|null */
-    private $plainPassword;
-
-    /** @var \DateTime|null */
-    private $lastLogin;
-
-    /** @var string|null */
-    private $confirmationToken;
-
-    /** @var \DateTime|null */
-    private $passwordRequestedAt;
+    private ?int $id = null;
+    private string $userIdentifier;
+    private ?string $firstName = null;
+    private ?string $lastName = null;
+    private bool $enabled = true;
+    private bool $verified = false;
+    private ?string $username = null;
+    private ?string $email = null;
+    private ?string $password = null;
+    private ?string $plainPassword = null;
+    private ?DateTime $lastLogin = null;
+    private ?string $confirmationToken = null;
+    private ?DateTime $passwordRequestedAt = null;
+    private ?DateTime $lastFailedLoginAttempt = null;
 
     /** @var GroupInterface[] */
     private $groups;
 
     /** @var string[] */
-    private $roles = [];
+    private array $roles = [];
+
+    private ?int $failedLoginAttempts = null;
+    private ?DateTime $passwordUpdatedAt = null;
 
     /**
      * Constructor
@@ -60,15 +45,22 @@ class User implements UserInterface, GroupableInterface, ResourceInterface
         $this->groups = new ArrayCollection();
     }
 
-    /**
-     * @return int|null
-     */
     public function getId(): ?int
     {
         return $this->id;
     }
 
-    public function isAdmin()
+    public function getUserIdentifier(): string
+    {
+        return $this->userIdentifier;
+    }
+
+    public function setUserIdentifier(string $userIdentifier): void
+    {
+        $this->userIdentifier = $userIdentifier;
+    }
+
+    public function isAdmin(): bool
     {
         return $this->hasRole(static::ROLE_ADMIN);
     }
@@ -82,21 +74,21 @@ class User implements UserInterface, GroupableInterface, ResourceInterface
         }
     }
 
-    public function isSuperAdmin()
+    public function isSuperAdmin(): bool
     {
         return $this->hasRole(static::ROLE_SUPER_ADMIN);
     }
 
-    public function setSuperAdmin($boolean)
+    public function setSuperAdmin(bool $superAdmin)
     {
-        if (true === $boolean) {
+        if ($superAdmin) {
             $this->addRole(static::ROLE_SUPER_ADMIN);
         } else {
             $this->removeRole(static::ROLE_SUPER_ADMIN);
         }
     }
 
-    public function getGroupNames()
+    public function getGroupNames(): array
     {
         $names = array();
         foreach ($this->groups->getValues() as $group) {
@@ -123,20 +115,18 @@ class User implements UserInterface, GroupableInterface, ResourceInterface
     public function addRole($role)
     {
         $role = strtoupper($role);
-        if ($role === static::ROLE_DEFAULT) {
-        }
 
         if (!in_array($role, $this->roles, true)) {
             $this->roles[] = $role;
         }
     }
 
-    public function eraseCredentials()
+    public function eraseCredentials(): void
     {
         $this->plainPassword = null;
     }
 
-    public function getRoles()
+    public function getRoles(): array
     {
         $roles = $this->roles;
 
@@ -150,7 +140,7 @@ class User implements UserInterface, GroupableInterface, ResourceInterface
         return array_unique($roles);
     }
 
-    public function hasRole($role)
+    public function hasRole($role): bool
     {
         return in_array(strtoupper($role), $this->getRoles(), true);
     }
@@ -173,7 +163,7 @@ class User implements UserInterface, GroupableInterface, ResourceInterface
         $this->plainPassword = $password;
     }
 
-    public function setLastLogin(\DateTime $time = null)
+    public function setLastLogin(DateTime $time = null)
     {
         $this->lastLogin = $time;
     }
@@ -183,19 +173,19 @@ class User implements UserInterface, GroupableInterface, ResourceInterface
         $this->confirmationToken = $confirmationToken;
     }
 
-    public function setPasswordRequestedAt(\DateTime $date = null)
+    public function setPasswordRequestedAt(DateTime $date = null)
     {
         $this->passwordRequestedAt = $date;
     }
 
-    public function getPasswordRequestedAt()
+    public function getPasswordRequestedAt(): ?DateTime
     {
         return $this->passwordRequestedAt;
     }
 
-    public function isPasswordRequestNonExpired($ttl)
+    public function isPasswordRequestNonExpired($ttl): bool
     {
-        return $this->getPasswordRequestedAt() instanceof \DateTime &&
+        return $this->getPasswordRequestedAt() instanceof DateTime &&
                $this->getPasswordRequestedAt()->getTimestamp() + $ttl > time();
     }
 
@@ -218,188 +208,118 @@ class User implements UserInterface, GroupableInterface, ResourceInterface
         return in_array($name, $this->getGroupNames());
     }
 
-    public function serialize()
-    {
-        return serialize(array(
-            $this->password,
-            $this->salt,
-            $this->username,
-            $this->enabled,
-            $this->id,
-            $this->email,
-        ));
-    }
-
-    public function unserialize($serialized)
-    {
-        $data = unserialize($serialized);
-
-        if (13 === count($data)) {
-            // Unserializing a User object from 1.3.x
-            unset($data[4], $data[5], $data[6], $data[9], $data[10]);
-            $data = array_values($data);
-        } elseif (11 === count($data)) {
-            // Unserializing a User from a dev version somewhere between 2.0-alpha3 and 2.0-beta1
-            unset($data[4], $data[7], $data[8]);
-            $data = array_values($data);
-        }
-
-        list(
-            $this->password,
-            $this->salt,
-            $this->username,
-            $this->enabled,
-            $this->id,
-            $this->email,
-            ) = $data;
-    }
-
     public function __toString()
     {
         return (string) ($this->getEmail() ?? $this->getUsername());
     }
 
-    /**
-     * @param bool $enabled
-     */
-    public function setEnabled($enabled): void
+    public function setEnabled(bool $enabled): void
     {
         $this->enabled = $enabled;
     }
 
-    /**
-     * @return string|null
-     */
     public function getFirstName(): ?string
     {
         return $this->firstName;
     }
 
-    /**
-     * @param string|null $firstName
-     */
-    public function setFirstName($firstName): void
+    public function setFirstName(?string $firstName): void
     {
         $this->firstName = $firstName;
     }
 
-    /**
-     * @return string|null
-     */
     public function getLastName(): ?string
     {
         return $this->lastName;
     }
 
-    /**
-     * @param string|null $lastName
-     */
-    public function setLastName($lastName): void
+    public function setLastName(?string $lastName): void
     {
         $this->lastName = $lastName;
     }
 
-    /**
-     * @return string|null
-     */
     public function getUsername(): ?string
     {
         return $this->username;
     }
 
-    /**
-     * @param string|null $username
-     */
-    public function setUsername($username): void
+    public function setUsername(?string $username): void
     {
         $this->username = $username;
     }
 
-    /**
-     * @return string|null
-     */
     public function getEmail(): ?string
     {
         return $this->email;
     }
 
-    /**
-     * @param string|null $email
-     */
-    public function setEmail($email): void
+    public function setEmail(?string $email): void
     {
         $this->email = $email;
     }
 
-    /**
-     * @return string|null
-     */
-    public function getSalt()
-    {
-        return $this->salt;
-    }
-
-    /**
-     * @param string $salt
-     */
-    public function setSalt($salt): void
-    {
-        $this->salt = $salt;
-    }
-
-    /**
-     * @return string
-     */
-    public function getPassword(): string
+    public function getPassword(): ?string
     {
         return $this->password;
     }
 
-    /**
-     * @param string $password
-     */
-    public function setPassword($password): void
+    public function setPassword(?string $password): void
     {
         $this->password = $password;
     }
 
-    /**
-     * @return string|null
-     */
     public function getPlainPassword(): ?string
     {
         return $this->plainPassword;
     }
 
-    /**
-     * @return \DateTime|null
-     */
-    public function getLastLogin(): ?\DateTime
+    public function getLastLogin(): ?DateTime
     {
         return $this->lastLogin;
     }
 
-    /**
-     * @return string|null
-     */
     public function getConfirmationToken(): ?string
     {
         return $this->confirmationToken;
     }
 
-    /**
-     * @return bool
-     */
     public function isVerified(): bool
     {
         return $this->verified;
     }
 
-    /**
-     * @param bool $verified
-     */
     public function setVerified(bool $verified): void
     {
         $this->verified = $verified;
+    }
+
+    public function getFailedLoginAttempts(): int
+    {
+        return $this->failedLoginAttempts ?? 0;
+    }
+
+    public function setFailedLoginAttempts(int $failedLoginAttempts): void
+    {
+        $this->failedLoginAttempts = $failedLoginAttempts;
+    }
+
+    public function getPasswordUpdatedAt(): ?DateTime
+    {
+        return $this->passwordUpdatedAt;
+    }
+
+    public function setPasswordUpdatedAt(?DateTime $passwordUpdatedAt): void
+    {
+        $this->passwordUpdatedAt = $passwordUpdatedAt;
+    }
+
+    public function getLastFailedLoginAttempt(): ?DateTime
+    {
+        return $this->lastFailedLoginAttempt;
+    }
+
+    public function setLastFailedLoginAttempt(?DateTime $lastFailedLoginAttempt): void
+    {
+        $this->lastFailedLoginAttempt = $lastFailedLoginAttempt;
     }
 }

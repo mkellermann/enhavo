@@ -13,9 +13,9 @@
         <many-to-one field="file" target-entity="Enhavo\Bundle\MediaBundle\Model\FileInterface">
             <cascade>
                 <cascade-persist/>
-                <cascade-remove/>
                 <cascade-refresh/>
             </cascade>
+            <join-column on-delete="SET NULL" />
         </many-to-one>
     </entity>
 </doctrine-mapping>

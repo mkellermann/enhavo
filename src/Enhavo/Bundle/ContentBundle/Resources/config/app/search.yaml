@@ -1,0 +1,12 @@
+enhavo_search:
+    metadata:
+        Enhavo\Bundle\ContentBundle\Entity\Content:
+            index:
+                title:
+                    type: html
+                    property: title
+            filter:
+                public:
+                    type: property
+                    property: public
+                    field_type: bool

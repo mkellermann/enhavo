@@ -4,9 +4,21 @@ app_person_index:
     path: /app/person/index
     methods: [GET]
     defaults:
-        _controller: app.controller.person:indexAction
+        _controller: app.controller.person::indexAction
         _sylius:
             viewer:
+                open_clickable: false
+                actions:
+                    export:
+                        type: form
+                        icon: file_download
+                        label: Export
+                        route: app_person_modal_export_form
+                        open_route: app_person_modal_export
+                        open_type: download
+                        open_route_mapping:
+                            from: "person_export[from]"
+                            to: "person_export[to]"
 
 app_person_create:
     options:
@@ -14,7 +26,7 @@ app_person_create:
     path: /app/person/create
     methods: [GET,POST]
     defaults:
-        _controller: app.controller.person:createAction
+        _controller: app.controller.person::createAction
         _sylius:
             redirect: app_person_update
             viewer:
@@ -25,7 +37,7 @@ app_person_update:
     path: /app/person/update/{id}
     methods: [GET,POST]
     defaults:
-        _controller: app.controller.person:updateAction
+        _controller: app.controller.person::updateAction
         _sylius:
             viewer:
 
@@ -35,7 +47,7 @@ app_person_table:
     path: /app/person/table
     methods: [GET,POST]
     defaults:
-        _controller: app.controller.person:tableAction
+        _controller: app.controller.person::tableAction
         _sylius:
             filters:
                 age:
@@ -72,7 +84,7 @@ app_person_delete:
     path: /app/person/delete/{id}
     methods: [POST]
     defaults:
-        _controller: app.controller.person:deleteAction
+        _controller: app.controller.person::deleteAction
 
 app_person_batch:
     options:
@@ -80,7 +92,7 @@ app_person_batch:
     path: /app/person/batch
     methods: [POST]
     defaults:
-        _controller: app.controller.person:batchAction
+        _controller: app.controller.person::batchAction
         _sylius:
             paginate: false
             criteria:
@@ -95,7 +107,7 @@ app_person_preview:
     path: /app/person/preview
     methods: [GET]
     defaults:
-        _controller: app.controller.person:previewAction
+        _controller: app.controller.person::previewAction
         _sylius:
             viewer:
 
@@ -105,9 +117,23 @@ app_person_resource_preview:
     path: /app/person/resource/preview
     methods: [POST]
     defaults:
-        _controller: app.controller.person:previewResourceAction
+        _controller: app.controller.person::previewResourceAction
         _sylius:
             viewer:
                 strategy_options:
                     service: enhavo_article.controller.article:showResourceAction
 
+app_person_modal_export_form:
+    options:
+        expose: true
+    path: /app/person/modal/export/form
+    controller: enhavo_app.controller.modal:formAction
+    defaults:
+        _config:
+            form: App\Form\Type\PersonExportType
+
+app_person_modal_export:
+    options:
+        expose: true
+    path: /app/person/modal/export/{from}/{to}
+    controller: App\Controller\PersonController::exportAction

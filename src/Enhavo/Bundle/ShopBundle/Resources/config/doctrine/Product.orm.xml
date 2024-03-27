@@ -2,6 +2,7 @@
 <doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping">
     <entity name="Enhavo\Bundle\ShopBundle\Entity\Product" table="shop_product">
         <field name="title" />
+        <field name="description" type="text" nullable="true" />
         <field name="price" type="integer" nullable="true" />
         <field name="reducedPrice" type="integer" nullable="true" />
         <field name="reduced" type="boolean" nullable="true" />
@@ -17,9 +18,13 @@
 
         <many-to-one field="picture" target-entity="Enhavo\Bundle\MediaBundle\Model\FileInterface">
             <join-column on-delete="SET NULL" />
+            <cascade>
+                <cascade-persist />
+                <cascade-refresh />
+            </cascade>
         </many-to-one>
 
-        <many-to-one field="taxRate" target-entity="Sylius\Component\Taxation\Model\TaxRateInterface">
+        <many-to-one field="taxCategory" target-entity="Sylius\Component\Taxation\Model\TaxCategoryInterface">
             <cascade>
                 <cascade-persist/>
             </cascade>
@@ -37,15 +42,44 @@
         <many-to-many field="pictures" target-entity="Enhavo\Bundle\MediaBundle\Model\FileInterface">
             <cascade>
                 <cascade-persist />
-                <cascade-remove />
                 <cascade-refresh />
             </cascade>
             <join-table name="shop_product_pictures">
                 <join-columns>
-                    <join-column name="product_id" referenced-column-name="id" unique="true" />
+                    <join-column name="product_id" referenced-column-name="id" on-delete="CASCADE"/>
                 </join-columns>
                 <inverse-join-columns>
-                    <join-column name="picture_id" referenced-column-name="id" unique="true" />
+                    <join-column name="picture_id" referenced-column-name="id" on-delete="CASCADE"/>
+                </inverse-join-columns>
+            </join-table>
+        </many-to-many>
+
+        <many-to-many field="categories" target-entity="Enhavo\Bundle\TaxonomyBundle\Model\TermInterface">
+            <cascade>
+                <cascade-persist/>
+                <cascade-refresh/>
+            </cascade>
+            <join-table name="shop_product_category">
+                <join-columns>
+                    <join-column name="product_id" on-delete="CASCADE" />
+                </join-columns>
+                <inverse-join-columns>
+                    <join-column name="category_id" on-delete="CASCADE" />
+                </inverse-join-columns>
+            </join-table>
+        </many-to-many>
+
+        <many-to-many field="tags" target-entity="Enhavo\Bundle\TaxonomyBundle\Model\TermInterface">
+            <cascade>
+                <cascade-persist/>
+                <cascade-refresh/>
+            </cascade>
+            <join-table name="shop_product_tag">
+                <join-columns>
+                    <join-column name="product_id" on-delete="CASCADE" />
+                </join-columns>
+                <inverse-join-columns>
+                    <join-column name="tag_id" on-delete="CASCADE" />
                 </inverse-join-columns>
             </join-table>
         </many-to-many>

@@ -38,11 +38,21 @@ class ElasticaORMAdapter implements AdapterInterface
      */
     private $em;
 
-    public function __construct(SearchableInterface $searchable, Query $query, EntityManagerInterface $em)
+    /**
+     * @var ElasticSearchIndexRemover
+     */
+    private $indexRemover;
+
+    public function __construct(
+        SearchableInterface $searchable,
+        Query $query,
+        EntityManagerInterface $em,
+        ElasticSearchIndexRemover $indexRemover)
     {
         $this->searchable = $searchable;
         $this->query = $query;
         $this->em = $em;
+        $this->indexRemover = $indexRemover;
     }
 
     /**
@@ -50,7 +60,7 @@ class ElasticaORMAdapter implements AdapterInterface
      *
      * @return integer The number of results.
      */
-    public function getNbResults()
+    public function getNbResults(): int
     {
         if (!$this->resultSet) {
             return $this->searchable->search($this->query)->getTotalHits();
@@ -67,7 +77,7 @@ class ElasticaORMAdapter implements AdapterInterface
      */
     public function getResultSet()
     {
-        return $this->convertResultSet($this->resultSet);
+        return $this->resultSet;
     }
 
     /**
@@ -78,7 +88,7 @@ class ElasticaORMAdapter implements AdapterInterface
      *
      * @return array|\Traversable The slice.
      */
-    public function getSlice($offset, $length)
+    public function getSlice($offset, $length): iterable
     {
         $this->resultSet = $this->searchable->search($this->query, array(
             'from' => $offset,
@@ -95,7 +105,12 @@ class ElasticaORMAdapter implements AdapterInterface
         foreach($resultSet as $data) {
             $id = $data->getDocument()->get('id');
             $className = $data->getDocument()->get('className');
-            $result[] = $this->em->getRepository($className)->find($id);
+            $entity = $this->em->getRepository($className)->find($id);
+            if ($entity === null) {
+                $this->indexRemover->removeIndexByClassNameAndId($className, $id);
+            } else {
+                $result[] = $entity;
+            }
         }
         return $result;
     }

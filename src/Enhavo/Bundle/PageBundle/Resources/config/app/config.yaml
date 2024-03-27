@@ -1,7 +1,7 @@
 cmf_routing:
     dynamic:
         controllers_by_class:
-            Enhavo\Bundle\PageBundle\Entity\Page: enhavo_page.controller.page:showResourceAction
+            Enhavo\Bundle\PageBundle\Entity\Page: enhavo_page.controller.page::showResourceAction
 
 doctrine:
     orm:
@@ -12,6 +12,7 @@ enhavo_app:
     template_paths:
         enhavo_page:
             path: '@EnhavoPageBundle/Resources/views'
+            alias: EnhavoPage
             priority: 10
     roles:
         page_index:
@@ -37,15 +38,17 @@ enhavo_routing:
             router:
                 default:
                     type: routable
-                admin:
+                view:
                     type: id
                     route: enhavo_page_page_update
+                admin:
+                    type: admin
+                    index_route: enhavo_page_page_index
+                    update_route: enhavo_page_page_update
             generators:
                 prefix:
                     type: prefix
                     properties: title
-                route_name:
-                    type: route_name
 
 enhavo_content:
     sitemap:

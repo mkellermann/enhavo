@@ -56,9 +56,15 @@ services:
         tags:
             - { name: kernel.event_subscriber }
 
+    Enhavo\Bundle\ContentBundle\EventListener\SaveSubscriber:
+        tags:
+            - { name: kernel.event_subscriber }
+
     Enhavo\Bundle\ContentBundle\Controller\SitemapController:
         arguments:
             - '@enhavo_content.sitemap.generator'
+        calls:
+            - [setContainer, ['@Psr\Container\ContainerInterface']]
         tags:
             - { name: controller.service_arguments }
 
@@ -84,3 +90,9 @@ services:
     Enhavo\Bundle\ContentBundle\Video\YoutubeProvider:
         arguments:
             - '%enhavo_content.video.youtube.api_key%'
+
+    Enhavo\Bundle\ContentBundle\Normalizer\ContentDataNormalizer:
+        arguments:
+            - '@enhavo_routing.router'
+        tags:
+            - { name: enhavo_api.data_normalizer }

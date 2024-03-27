@@ -28,6 +28,15 @@ class FileFactory extends Factory
         $this->provider = $provider;
     }
 
+    public function createNew()
+    {
+        /** @var FileInterface $file */
+        $file = parent::createNew();
+        $file->setCreatedAt(new \DateTime());
+
+        return $file;
+    }
+
     public function createTemp()
     {
         /** @var FileInterface $file */
@@ -35,10 +44,10 @@ class FileFactory extends Factory
 
         $file->setMimeType('application/octet-stream');
         $file->setExtension(null);
-        $file->setFilename(tempnam(sys_get_temp_dir(), 'Content'));
 
         $content = new Content('');
         $file->setContent($content);
+        $file->setFilename(basename($content->getFilePath()));
 
         $this->provider->updateFile($file);
         return $file;
@@ -58,6 +67,7 @@ class FileFactory extends Factory
         $file->setOrder($originalResource->getOrder());
         $file->setFilename($originalResource->getFilename());
         $file->setParameters($originalResource->getParameters());
+        $file->setLibrary($originalResource->isLibrary());
 
         $content = new Content($originalResource->getContent()->getContent());
         $file->setContent($content);

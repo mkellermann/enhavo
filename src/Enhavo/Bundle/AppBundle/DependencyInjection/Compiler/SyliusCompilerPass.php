@@ -8,9 +8,9 @@
 
 namespace Enhavo\Bundle\AppBundle\DependencyInjection\Compiler;
 
-use Enhavo\Bundle\AppBundle\Batch\BatchManager;
 use Enhavo\Bundle\AppBundle\Controller\RequestConfiguration;
 use Enhavo\Bundle\AppBundle\Controller\ResourcesResolver;
+use Enhavo\Bundle\AppBundle\Template\TemplateResolverInterface;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
@@ -65,13 +65,11 @@ class SyliusCompilerPass implements CompilerPassInterface
         }
 
         foreach ($controllerDefinitionIds as $definitionName) {
-            if($container->hasDefinition($definitionName)) {
+            if ($container->hasDefinition($definitionName)) {
                 $definition = $container->getDefinition($definitionName);
-                $definition->addArgument($container->getDefinition('view.factory'));
-                $definition->addArgument($container->getDefinition('enhavo.sorting_manager'));
-                $definition->addArgument($container->getDefinition(BatchManager::class));
-                $definition->addArgument($container->getDefinition('enhavo_app.factory.duplicate_resource_factory'));
-                $definition->addArgument($container->getDefinition('enhavo_app.event_dispatcher'));
+                $definition->addMethodCall('setViewFactory', [$container->getDefinition('Enhavo\Component\Type\FactoryInterface[View]')]);
+                $definition->addMethodCall('setEndpointFactory', [$container->getDefinition('Enhavo\Component\Type\FactoryInterface[Endpoint]')]);
+                $definition->addMethodCall('setTemplateResolver', [$container->getDefinition($container->getAlias(TemplateResolverInterface::class))]);
             }
         }
     }

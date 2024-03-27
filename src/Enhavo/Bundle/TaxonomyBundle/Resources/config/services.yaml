@@ -62,3 +62,20 @@ services:
             - '@enhavo_taxonomy.factory.term'
         tags:
             - { name: form.type }
+
+    Enhavo\Bundle\TaxonomyBundle\Taxonomy\TaxonomyManager:
+        arguments:
+            - '@enhavo_taxonomy.repository.taxonomy'
+
+    Enhavo\Bundle\TaxonomyBundle\EventListener\TermSubscriber:
+        arguments:
+            - '@Enhavo\Bundle\TaxonomyBundle\Taxonomy\TaxonomyManager'
+        tags:
+            - { name: kernel.event_subscriber }
+
+    validator.term_unique:
+        class:  Enhavo\Bundle\TaxonomyBundle\Validator\Constraints\TermUniqueValidator
+        arguments:
+            - '@enhavo_taxonomy.repository.term'
+        tags:
+            - { name: validator.constraint_validator, alias: term_unique }

@@ -3,12 +3,15 @@
 namespace Enhavo\Bundle\UserBundle\DependencyInjection;
 
 use Enhavo\Bundle\AppBundle\Controller\ResourceController;
+use Enhavo\Bundle\UserBundle\Configuration\RequestConfigKeyProvider;
+use Enhavo\Bundle\UserBundle\Controller\UserController;
 use Enhavo\Bundle\UserBundle\Factory\UserFactory;
 use Enhavo\Bundle\UserBundle\Form\Type\ChangeEmailConfirmType;
 use Enhavo\Bundle\UserBundle\Form\Type\ChangeEmailRequestType;
 use Enhavo\Bundle\UserBundle\Form\Type\ChangePasswordType;
 use Enhavo\Bundle\UserBundle\Form\Type\DeleteConfirmType;
 use Enhavo\Bundle\UserBundle\Form\Type\GroupType;
+use Enhavo\Bundle\UserBundle\Form\Type\LoginType;
 use Enhavo\Bundle\UserBundle\Form\Type\ProfileType;
 use Enhavo\Bundle\UserBundle\Form\Type\RegistrationType;
 use Enhavo\Bundle\UserBundle\Form\Type\ResetPasswordRequestType;
@@ -43,7 +46,7 @@ class Configuration implements ConfigurationInterface
 
         $this->addResourceSection($rootNode);
         $this->addParametersSection($rootNode);
-        $this->addMapperSection($rootNode);
+        $this->addUserIdentifierSection($rootNode);
         $this->addConfigNode($rootNode);
 
         return $treeBuilder;
@@ -69,7 +72,7 @@ class Configuration implements ConfigurationInterface
                                     ->addDefaultsIfNotSet()
                                     ->children()
                                         ->scalarNode('model')->defaultValue(User::class)->end()
-                                        ->scalarNode('controller')->defaultValue(ResourceController::class)->end()
+                                        ->scalarNode('controller')->defaultValue(UserController::class)->end()
                                         ->scalarNode('repository')->defaultValue(UserRepository::class)->end()
                                         ->scalarNode('factory')->defaultValue(UserFactory::class)->end()
                                         ->scalarNode('form')->defaultValue(UserType::class)->cannotBeEmpty()->end()
@@ -105,21 +108,17 @@ class Configuration implements ConfigurationInterface
             ->children()
                 ->scalarNode('default_firewall')->defaultValue('main')->end()
                 ->scalarNode('user_manager')->defaultValue(UserManager::class)->end()
+                ->scalarNode('config_key_provider')->defaultValue(RequestConfigKeyProvider::class)->end()
             ->end()
         ;
     }
 
-    private function addMapperSection(ArrayNodeDefinition $node)
+    private function addUserIdentifierSection(ArrayNodeDefinition $node)
     {
         $node
             ->children()
-                ->arrayNode('mapper')
-                    ->addDefaultsIfNotSet()
-                    ->children()
-                        ->variableNode('credential_properties')->defaultValue(['email'])->end()
-                        ->variableNode('register_properties')->defaultValue(['email'])->end()
-                        ->scalarNode('glue')->defaultValue('.')->end()
-                    ->end()
+                ->arrayNode('user_identifiers')
+                    ->prototype('scalar')
                 ->end()
             ->end()
         ;
@@ -136,6 +135,7 @@ class Configuration implements ConfigurationInterface
 
         ;
 
+        $this->addConfigGeneralSection($prototype);
         $this->addConfigRegistrationSection($prototype);
         $this->addConfigProfileSection($prototype);
         $this->addConfigResetPasswordSection($prototype);
@@ -146,13 +146,22 @@ class Configuration implements ConfigurationInterface
         $this->addConfigVerificationSection($prototype);
     }
 
+    private function addConfigGeneralSection(NodeDefinition $node)
+    {
+        $node
+            ->children()
+                ->variableNode('firewalls')->defaultValue([])->end()
+            ->end()
+        ;
+    }
+
     private function addConfigRegistrationSection(NodeDefinition $node)
     {
         $node
             ->children()
                 ->arrayNode('registration_register')
                     ->children()
-                        ->scalarNode('template')->isRequired()->cannotBeEmpty()->end()
+                        ->scalarNode('template')->defaultValue('{{ area }}/user/registration/register.html.twig')->end()
                         ->scalarNode('redirect_route')->defaultValue(null)->end()
                         ->scalarNode('confirmation_route')->isRequired()->cannotBeEmpty()->end()
                         ->append($this->addConfigMailNode())
@@ -172,13 +181,13 @@ class Configuration implements ConfigurationInterface
 
                 ->arrayNode('registration_check')
                     ->children()
-                        ->scalarNode('template')->isRequired()->cannotBeEmpty()->end()
+                        ->scalarNode('template')->defaultValue('{{ area }}/user/registration/check.html.twig')->end()
                     ->end()
                 ->end()
 
                 ->arrayNode('registration_confirm')
                     ->children()
-                        ->scalarNode('template')->isRequired()->cannotBeEmpty()->end()
+                        ->scalarNode('template')->defaultValue('{{ area }}/user/registration/confirm.html.twig')->end()
                         ->scalarNode('auto_enabled')->defaultValue(true)->end()
                         ->append($this->addConfigMailNode())
                         ->scalarNode('translation_domain')->defaultValue(null)->end()
@@ -188,7 +197,7 @@ class Configuration implements ConfigurationInterface
 
                 ->arrayNode('registration_finish')
                     ->children()
-                        ->scalarNode('template')->isRequired()->cannotBeEmpty()->end()
+                        ->scalarNode('template')->defaultValue('{{ area }}/user/registration/finish.html.twig')->end()
                     ->end()
                 ->end()
             ->end()
@@ -201,7 +210,7 @@ class Configuration implements ConfigurationInterface
             ->children()
                 ->arrayNode('profile')
                     ->children()
-                        ->scalarNode('template')->isRequired()->cannotBeEmpty()->end()
+                        ->scalarNode('template')->defaultValue('{{ area }}/user/profile/profile.html.twig')->end()
                         ->arrayNode('form')
                             ->addDefaultsIfNotSet()
                             ->children()
@@ -220,7 +229,7 @@ class Configuration implements ConfigurationInterface
             ->children()
                 ->arrayNode('reset_password_request')
                     ->children()
-                        ->scalarNode('template')->isRequired()->cannotBeEmpty()->end()
+                        ->scalarNode('template')->defaultValue('{{ area }}/user/reset-password/request.html.twig')->end()
                         ->append($this->addConfigMailNode())
                         ->scalarNode('translation_domain')->defaultValue(null)->end()
                         ->scalarNode('redirect_route')->defaultValue(null)->end()
@@ -237,14 +246,14 @@ class Configuration implements ConfigurationInterface
 
                 ->arrayNode('reset_password_check')
                     ->children()
-                        ->scalarNode('template')->isRequired()->cannotBeEmpty()->end()
+                         ->scalarNode('template')->defaultValue('{{ area }}/user/reset-password/check.html.twig')->end()
                     ->end()
                 ->end()
 
                 ->arrayNode('reset_password_confirm')
                     ->children()
                         ->scalarNode('auto_login')->defaultValue(true)->end()
-                        ->scalarNode('template')->isRequired()->cannotBeEmpty()->end()
+                        ->scalarNode('template')->defaultValue('{{ area }}/user/reset-password/confirm.html.twig')->end()
                         ->scalarNode('redirect_route')->defaultValue(null)->end()
                         ->arrayNode('form')
                             ->addDefaultsIfNotSet()
@@ -258,7 +267,7 @@ class Configuration implements ConfigurationInterface
 
                 ->arrayNode('reset_password_finish')
                     ->children()
-                        ->scalarNode('template')->isRequired()->cannotBeEmpty()->end()
+                        ->scalarNode('template')->defaultValue('{{ area }}/user/reset-password/finish.html.twig')->end()
                     ->end()
                 ->end()
             ;
@@ -270,7 +279,7 @@ class Configuration implements ConfigurationInterface
             ->children()
                 ->arrayNode('change_email_request')
                     ->children()
-                        ->scalarNode('template')->isRequired()->cannotBeEmpty()->end()
+                        ->scalarNode('template')->defaultValue('{{ area }}/user/change-email/request.html.twig')->end()
                         ->append($this->addConfigMailNode())
                         ->scalarNode('translation_domain')->defaultValue(null)->end()
                         ->scalarNode('redirect_route')->defaultValue(null)->end()
@@ -287,13 +296,13 @@ class Configuration implements ConfigurationInterface
 
                 ->arrayNode('change_email_check')
                     ->children()
-                        ->scalarNode('template')->isRequired()->cannotBeEmpty()->end()
+                        ->scalarNode('template')->defaultValue('{{ area }}/user/change-email/check.html.twig')->end()
                     ->end()
                 ->end()
 
                 ->arrayNode('change_email_confirm')
                     ->children()
-                        ->scalarNode('template')->isRequired()->cannotBeEmpty()->end()
+                        ->scalarNode('template')->defaultValue('{{ area }}/user/change-email/confirm.html.twig')->end()
                         ->scalarNode('redirect_route')->defaultValue(null)->end()
                         ->append($this->addConfigMailNode())
                         ->scalarNode('translation_domain')->defaultValue(null)->end()
@@ -310,7 +319,7 @@ class Configuration implements ConfigurationInterface
 
                 ->arrayNode('change_email_finish')
                     ->children()
-                        ->scalarNode('template')->isRequired()->cannotBeEmpty()->end()
+                        ->scalarNode('template')->defaultValue('{{ area }}/user/change-email/finish.html.twig')->end()
                     ->end()
                 ->end()
             ->end()
@@ -323,9 +332,21 @@ class Configuration implements ConfigurationInterface
             ->children()
                 ->arrayNode('login')
                     ->children()
-                        ->scalarNode('template')->isRequired()->cannotBeEmpty()->end()
+                        ->arrayNode('form')
+                            ->addDefaultsIfNotSet()
+                            ->children()
+                                ->scalarNode('class')->defaultValue(LoginType::class)->end()
+                                ->variableNode('options')->defaultValue([])->end()
+                            ->end()
+                        ->end()
+                        ->scalarNode('repository_method')->defaultValue('loadUserByIdentifier')->cannotBeEmpty()->end()
+                        ->scalarNode('template')->defaultValue('{{ area }}/user/login/login.html.twig')->end()
                         ->scalarNode('redirect_route')->defaultValue(null)->end()
                         ->scalarNode('route')->isRequired()->cannotBeEmpty()->end()
+                        ->scalarNode('check_route')->isRequired()->cannotBeEmpty()->end()
+                        ->scalarNode('max_failed_login_attempts')->defaultValue(0)->end()
+                        ->scalarNode('password_max_age')->defaultValue(null)->end()
+                        ->scalarNode('verification_required')->defaultValue(false)->end()
                     ->end()
                 ->end()
             ->end()
@@ -338,7 +359,7 @@ class Configuration implements ConfigurationInterface
             ->children()
                 ->arrayNode('change_password')
                     ->children()
-                        ->scalarNode('template')->defaultValue(null)->end()
+                        ->scalarNode('template')->defaultValue('{{ area }}/user/change-password/change.html.twig')->end()
                         ->arrayNode('form')
                             ->addDefaultsIfNotSet()
                             ->children()
@@ -357,7 +378,7 @@ class Configuration implements ConfigurationInterface
             ->children()
                 ->arrayNode('delete_confirm')
                     ->children()
-                        ->scalarNode('template')->isRequired()->cannotBeEmpty()->end()
+                        ->scalarNode('template')->defaultValue('{{ area }}/user/delete/confirm.html.twig')->end()
                         ->scalarNode('redirect_route')->defaultValue(null)->end()
                         ->append($this->addConfigMailNode())
                         ->scalarNode('translation_domain')->defaultValue('EnhavoUserBundle')->end()
@@ -373,7 +394,7 @@ class Configuration implements ConfigurationInterface
 
                 ->arrayNode('delete_finish')
                     ->children()
-                        ->scalarNode('template')->isRequired()->cannotBeEmpty()->end()
+                        ->scalarNode('template')->defaultValue('{{ area }}/user/delete/finish.html.twig')->end()
                     ->end()
                 ->end()
             ->end()
@@ -386,7 +407,7 @@ class Configuration implements ConfigurationInterface
             ->children()
                 ->arrayNode('verification_request')
                     ->children()
-                        ->scalarNode('template')->isRequired()->cannotBeEmpty()->end()
+                        ->scalarNode('template')->defaultValue('{{ area }}/user/verification/request.html.twig')->end()
                         ->scalarNode('route')->defaultValue(null)->end()
                         ->scalarNode('confirmation_route')->isRequired()->cannotBeEmpty()->end()
                         ->append($this->addConfigMailNode())
@@ -396,7 +417,7 @@ class Configuration implements ConfigurationInterface
 
                 ->arrayNode('verification_confirm')
                     ->children()
-                        ->scalarNode('template')->isRequired()->cannotBeEmpty()->end()
+                        ->scalarNode('template')->defaultValue('{{ area }}/user/verification/confirm.html.twig')->end()
                     ->end()
                 ->end()
             ->end()
@@ -412,6 +433,7 @@ class Configuration implements ConfigurationInterface
             ->children()
                 ->scalarNode('template')->isRequired()->cannotBeEmpty()->end()
                 ->scalarNode('subject')->defaultValue('registration.mail.subject')->end()
+                ->scalarNode('from')->defaultValue(null)->end()
                 ->scalarNode('sender_name')->defaultValue(null)->end()
                 ->scalarNode('content_type')->defaultValue('text/plain')->end()
             ->end()

@@ -8,14 +8,16 @@
   "authors": [
     {
       "name": "Gerhard Seidel",
-      "email": "gseidel@xq-web.de"
+      "email": "gs@weareindeed.com"
     }
   ],
   "autoload": {
     "psr-4": { "Enhavo\\Bundle\\PaymentBundle\\": "" }
   },
   "require": {
-    "php": "^7.2",
-    "enhavo/app-bundle": "dev-master"
+    "php": "^8.0",
+    "enhavo/app-bundle": "dev-master",
+    "sylius/payment-bundle": "^1.12",
+    "sylius/payment": "^1.12"
   }
 }

@@ -39,8 +39,7 @@ class ProfileController extends AbstractUserController
 
     public function indexAction(Request $request)
     {
-        $configKey = $this->getConfigKey($request);
-        $configuration = $this->provider->getProfileConfiguration($configKey);
+        $configuration = $this->provider->getProfileConfiguration();
 
         /** @var UserInterface $user */
         $user = $this->getUser();
@@ -78,7 +77,7 @@ class ProfileController extends AbstractUserController
             }
         }
 
-        return $this->render($this->getTemplate($configuration->getTemplate()), [
+        return $this->render($this->resolveTemplate($configuration->getTemplate()), [
             'form' => $form->createView(),
             'data' => [
                 'messages' => $this->getFlashMessages()

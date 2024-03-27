@@ -10,351 +10,29 @@ namespace Enhavo\Bundle\ShopBundle\Entity;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use Enhavo\Bundle\ArticleBundle\Entity\Article;
 use Enhavo\Bundle\RoutingBundle\Entity\Route;
 use Enhavo\Bundle\RoutingBundle\Model\RouteInterface;
 use Enhavo\Bundle\RoutingBundle\Model\Routeable;
-use Enhavo\Bundle\MediaBundle\Model\FileInterface;
+use Enhavo\Bundle\ShopBundle\Model\ProductAccessTrait;
 use Enhavo\Bundle\ShopBundle\Model\ProductInterface;
+use Enhavo\Bundle\TaxonomyBundle\Model\TermInterface;
 use Sylius\Component\Product\Model\Product as SyliusProduct;
-use Sylius\Component\Taxation\Model\TaxRateInterface;
-use Sylius\Component\Shipping\Model\ShippingCategoryInterface;
 
 class Product extends SyliusProduct implements ProductInterface, Routeable
 {
-    /** @var string */
-    private $slug;
+    use ProductAccessTrait;
 
-    /** @var string */
-    private $title;
+    private ?Route $route = null;
+    private Collection $categories;
+    private Collection $tags;
 
-    /** @var boolean */
-    private $active = true;
-
-    /** @var \Doctrine\Common\Collections\Collection */
-    private $pictures;
-
-    /** @var FileInterface */
-    private $picture;
-
-    /** @var integer */
-    private $price;
-
-    /** @var integer */
-    private $reducedPrice;
-
-    /** @var boolean */
-    private $reduced;
-
-    /** @var ShippingCategoryInterface */
-    private $shippingCategory;
-
-    /** @var TaxRateInterface */
-    private $taxRate;
-
-    /** @var string */
-    private $lengthUnit;
-
-    /** @var integer */
-    private $height;
-
-    /** @var integer */
-    private $width;
-
-    /** @var integer */
-    private $depth;
-
-    /** @var string */
-    private $volumeUnit;
-
-    /** @var integer */
-    private $volume;
-
-    /** @var string */
-    private $weightUnit;
-
-    /** @var integer */
-    private $weight;
-
-    /** @var boolean */
-    private $shippingRequired;
-
-    /** @var Route */
-    private $route;
-
-    /**
-     * Product constructor.
-     */
     public function __construct()
     {
         parent::__construct();
         $this->pictures = new ArrayCollection();
-    }
-
-    /**
-     * @return string
-     */
-    public function getTitle(): ?string
-    {
-        return $this->title;
-    }
-
-    /**
-     * @param string $title
-     * @return self
-     */
-    public function setTitle($title): ProductInterface
-    {
-        $this->title = $title;
-
-        return $this;
-    }
-
-    /**
-     * @return FileInterface
-     */
-    public function getPicture()
-    {
-        return $this->picture;
-    }
-
-    /**
-     * @param FileInterface $picture
-     * @return self
-     */
-    public function setPicture($picture): ProductInterface
-    {
-        $this->picture = $picture;
-
-        return $this;
-    }
-
-    /**
-     * Set price
-     *
-     * @param integer $price
-     *
-     * @return Product
-     */
-    public function setPrice($price): ProductInterface
-    {
-        $this->price = $price;
-
-        return $this;
-    }
-
-    /**
-     * Get price
-     *
-     * @return integer
-     */
-    public function getPrice()
-    {
-        return $this->price;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isReduced(): ?bool
-    {
-        return $this->reduced;
-    }
-
-    /**
-     * @param bool $reduced
-     * @return self
-     */
-    public function setReduced(?bool $reduced): ProductInterface
-    {
-        $this->reduced = $reduced;
-
-        return $this;
-    }
-
-    /**
-     * @return ShippingCategoryInterface
-     */
-    public function getShippingCategory()
-    {
-        return $this->shippingCategory;
-    }
-
-    /**
-     * @param ShippingCategoryInterface $shippingCategory
-     * @return $this
-     */
-    public function setShippingCategory(ShippingCategoryInterface $shippingCategory): ProductInterface
-    {
-        $this->shippingCategory = $shippingCategory;
-
-        return $this;
-    }
-
-    /**
-     * Set taxRate
-     *
-     * @param TaxRateInterface $taxRate
-     * @return Product
-     */
-    public function setTaxRate(TaxRateInterface $taxRate = null): ProductInterface
-    {
-        $this->taxRate = $taxRate;
-
-        return $this;
-    }
-
-    /**
-     * Get taxRate
-     *
-     * @return TaxRateInterface
-     */
-    public function getTaxRate()
-    {
-        return $this->taxRate;
-    }
-
-    /**
-     * Set height
-     *
-     * @param integer $height
-     * @return Product
-     */
-    public function setHeight(?int $height): ProductInterface
-    {
-        $this->height = $height;
-
-        return $this;
-    }
-
-    /**
-     * Get height
-     *
-     * @return integer
-     */
-    public function getHeight()
-    {
-        return $this->height;
-    }
-
-    /**
-     * Set width
-     *
-     * @param integer $width
-     * @return Product
-     */
-    public function setWidth(?int $width): ProductInterface
-    {
-        $this->width = $width;
-
-        return $this;
-    }
-
-    /**
-     * Get width
-     *
-     * @return integer
-     */
-    public function getWidth()
-    {
-        return $this->width;
-    }
-
-    /**
-     * Set depth
-     *
-     * @param integer $depth
-     * @return Product
-     */
-    public function setDepth(?int $depth): ProductInterface
-    {
-        $this->depth = $depth;
-
-        return $this;
-    }
-
-    /**
-     * Get depth
-     *
-     * @return integer
-     */
-    public function getDepth()
-    {
-        return $this->depth;
-    }
-
-    /**
-     * Set volume
-     *
-     * @param integer $volume
-     * @return Product
-     */
-    public function setVolume(?int $volume): ProductInterface
-    {
-        $this->volume = $volume;
-
-        return $this;
-    }
-
-    /**
-     * Get volume
-     *
-     * @return integer
-     */
-    public function getVolume(): ?int
-    {
-        return $this->volume;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isShippingRequired(): ?bool
-    {
-        return $this->shippingRequired;
-    }
-
-    /**
-     * @param bool $shippingRequired
-     * @return self
-     */
-    public function setShippingRequired(bool $shippingRequired): ProductInterface
-    {
-        $this->shippingRequired = $shippingRequired;
-
-        return $this;
-    }
-
-    /**
-     * Set weight
-     *
-     * @param integer $weight
-     * @return Product
-     */
-    public function setWeight($weight): ProductInterface
-    {
-        $this->weight = $weight;
-
-        return $this;
-    }
-
-    /**
-     * Get weight
-     *
-     * @return integer
-     */
-    public function getWeight()
-    {
-        return $this->weight;
-    }
-
-    public function getTax()
-    {
-        return intval($this->getPrice() * $this->getTaxRate()->getAmount());
-    }
-
-    public function getUnitPriceTotal()
-    {
-        return $this->getTax() + $this->getPrice();
+        $this->categories = new ArrayCollection();
+        $this->tags = new ArrayCollection();
     }
 
     public function __toString(): string
@@ -390,147 +68,86 @@ class Product extends SyliusProduct implements ProductInterface, Routeable
         $this->setTitle($name);
     }
 
-    /**
-     * @return string
-     */
-    public function getSlug(): string
+    public function getDefaultVariant(): ?ProductVariant
     {
-        return $this->slug;
+        $variants = $this->getEnabledVariants();
+        foreach ($variants as $variant) {
+            if ($variant->isDefault()) {
+                return $variant;
+            }
+        }
+
+        $variant = $variants->first();
+        if ($variant !== false) {
+            return $variant;
+        }
+
+        return null;
     }
 
     /**
-     * @param string $slug
-     */
-    public function setSlug(?string $slug = null): void
-    {
-        $this->slug = $slug;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isActive(): ?bool
-    {
-        return $this->active;
-    }
-
-    /**
-     * @param bool $active
-     * @return self
-     */
-    public function setActive(?bool $active): ProductInterface
-    {
-        $this->active = $active;
-
-        return $this;
-    }
-
-    /**
-     * Add picture
+     * Add category
      *
-     * @param FileInterface $picture
-     * @return Product
-     */
-    public function addPicture(FileInterface $picture): ProductInterface
-    {
-        $this->pictures[] = $picture;
-
-        return $this;
-    }
-
-    /**
-     * Remove picture
+     * @param TermInterface $category
      *
-     * @param FileInterface $picture
+     * @return Article
      */
-    public function removePicture(FileInterface $picture): void
+    public function addCategory(TermInterface $category)
     {
-        $this->pictures->removeElement($picture);
+        $this->categories[] = $category;
+
+        return $this;
     }
 
     /**
-     * Get pictures
+     * Remove category
      *
-     * @return \Doctrine\Common\Collections\Collection
+     * @param TermInterface $category
      */
-    public function getPictures(): Collection
+    public function removeCategory(TermInterface $category)
     {
-        return $this->pictures;
+        $this->categories->removeElement($category);
     }
 
     /**
-     * @return int
+     * Get categories
+     *
+     * @return Collection|TermInterface[]
      */
-    public function getReducedPrice(): ?int
+    public function getCategories()
     {
-        return $this->reducedPrice;
+        return $this->categories;
     }
 
     /**
-     * @param int $reducedPrice
-     * @return self
+     * Add tag
+     *
+     * @param TermInterface $tag
+     *
+     * @return Article
      */
-    public function setReducedPrice(?int $reducedPrice): ProductInterface
+    public function addTag(TermInterface $tag)
     {
-        $this->reducedPrice = $reducedPrice;
+        $this->tags[] = $tag;
 
         return $this;
     }
 
     /**
-     * @return string
+     * Remove tag
+     *
+     * @param TermInterface $tag
      */
-    public function getLengthUnit(): ?string
+    public function removeTag(TermInterface $tag)
     {
-        return $this->lengthUnit;
+        $this->tags->removeElement($tag);
     }
 
     /**
-     * @param string $lengthUnit
-     * @return self
+     * @return Collection|TermInterface[]
      */
-    public function setLengthUnit(?string $lengthUnit): ProductInterface
+    public function getTags()
     {
-        $this->lengthUnit = $lengthUnit;
-
-        return $this;
-    }
-
-    /**
-     * @return string
-     */
-    public function getVolumeUnit(): ?string
-    {
-        return $this->volumeUnit;
-    }
-
-    /**
-     * @param string $volumeUnit
-     * @return self
-     */
-    public function setVolumeUnit(?string $volumeUnit): ProductInterface
-    {
-        $this->volumeUnit = $volumeUnit;
-
-        return $this;
-    }
-
-    /**
-     * @return string
-     */
-    public function getWeightUnit(): ?string
-    {
-        return $this->weightUnit;
-    }
-
-    /**
-     * @param string $weightUnit
-     * @return self
-     */
-    public function setWeightUnit(?string $weightUnit): ProductInterface
-    {
-        $this->weightUnit = $weightUnit;
-
-        return $this;
+        return $this->tags;
     }
 }

@@ -19,7 +19,6 @@ class BaseBlockType extends AbstractType implements BlockTypeInterface
     public function createViewData(BlockInterface $block, ViewData $viewData, $resource, array $options)
     {
         $viewData['block'] = $block;
-        $viewData['resource'] = $resource;
     }
 
     public function finishViewData(BlockInterface $block, ViewData $viewData, $resource, array $options)
@@ -47,6 +46,11 @@ class BaseBlockType extends AbstractType implements BlockTypeInterface
         return $options['template'];
     }
 
+    public function getComponent(array $options)
+    {
+        return $options['component'];
+    }
+
     public function getGroups(array $options)
     {
         return $options['groups'];
@@ -66,13 +70,14 @@ class BaseBlockType extends AbstractType implements BlockTypeInterface
     {
         $resolver->setDefaults([
             'groups' => ['default'],
-            'translation_domain' => null
+            'translation_domain' => null,
+            'template' => null,
+            'component' => null,
         ]);
 
         $resolver->setRequired([
             'factory',
             'model',
-            'template',
             'form',
             'label',
         ]);

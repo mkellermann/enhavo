@@ -9,11 +9,6 @@ services:
             - '%enhavo_app.roles%'
             - '@translator'
 
-    enhavo_app.event_dispatcher:
-        class: Enhavo\Bundle\AppBundle\Controller\AppEventDispatcher
-        arguments:
-            - '@event_dispatcher'
-
     security.authentication.voter.super_admin:
         class: Enhavo\Bundle\AppBundle\Security\Authentication\Voter\SuperAdminVoter
         tags:
@@ -41,12 +36,11 @@ services:
         arguments:
             - []
 
-    Enhavo\Bundle\AppBundle\Template\TemplateManager:
-        alias: enhavo_app.template.manager
+    Enhavo\Bundle\AppBundle\Util\TokenGeneratorInterface:
+        alias: enhavo_app.util.secure_url_token_generator
 
-    enhavo_app.template.manager:
-        public: true
-        class: Enhavo\Bundle\AppBundle\Template\TemplateManager
+
+    Enhavo\Bundle\AppBundle\Template\TemplateResolver:
         arguments:
             - '@kernel'
             - '@filesystem'
@@ -65,8 +59,6 @@ services:
             - '@argument_metadata_factory'
 
     Enhavo\Bundle\AppBundle\Security\ExceptionListener:
-        arguments:
-            - '@session'
         tags:
             - { name: kernel.event_listener, event: kernel.exception, priority: 300 }
 
@@ -75,22 +67,99 @@ services:
         decorates: twig.error_renderer.html
         arguments:
             - '@twig'
-            - '@enhavo.error_handler.html.inner'
             - '%kernel.project_dir%'
+            - '@Enhavo\Bundle\AppBundle\Template\TemplateResolverInterface'
+            - '@enhavo.error_handler.html.inner'
             - '@request_stack'
             - '%kernel.debug%'
 
     Enhavo\Bundle\AppBundle\Mailer\MailerManager:
         public: true
         arguments:
-            - '@swiftmailer.mailer'
-            - '@enhavo_app.template.manager'
+            - '@mailer.mailer'
+            - '@Enhavo\Bundle\AppBundle\Template\TemplateResolverInterface'
             - '@twig'
             - '%enhavo_app.mailer.defaults%'
             - '%enhavo_app.mailer.mails%'
             - '%enhavo_app.mailer.model%'
+            - '@translator'
+
+    enhavo_app.manager.resource:
+        alias: Enhavo\Bundle\AppBundle\Resource\ResourceManager
 
     Enhavo\Bundle\AppBundle\Resource\ResourceManager:
         arguments:
             - '@event_dispatcher'
             - '@doctrine.orm.entity_manager'
+            - '@sylius.resource_registry'
+            - '@sm.factory'
+        calls:
+            - [setContainer, ['@service_container']]
+
+    Enhavo\Bundle\AppBundle\EventListener\ComponentSubscriber:
+        arguments:
+            - '@Enhavo\Bundle\AppBundle\Template\TemplateResolverInterface'
+        tags:
+            - { name: kernel.event_subscriber }
+
+    Enhavo\Bundle\AppBundle\EventListener\TimestampableSubscriber:
+        tags:
+            - { name: kernel.event_subscriber }
+
+    Enhavo\Bundle\AppBundle\Normalizer\FormDataNormalizer:
+        arguments:
+            - '@Enhavo\Bundle\VueFormBundle\Form\VueForm'
+        tags:
+            - { name: enhavo_api.data_normalizer }
+
+    Enhavo\Bundle\AppBundle\Normalizer\RouteCollectionDataNormalizer:
+        arguments:
+            - '@Enhavo\Bundle\VueFormBundle\Form\VueForm'
+        tags:
+            - { name: enhavo_api.data_normalizer }
+
+    Enhavo\Bundle\AppBundle\Routing\ExposeRouteCollector:
+        arguments:
+            - '@router'
+        tags:
+            - { name: enhavo_app.route_collector }
+
+    enhavo_app.route_collector:
+        class:  Enhavo\Bundle\AppBundle\Routing\ChainRouteCollector
+
+    Enhavo\Bundle\AppBundle\Routing\RouteCollectorInterface:
+        alias: enhavo_app.route_collector
+
+
+    Enhavo\Bundle\AppBundle\Routing\Loader\VueRouterRouteLoader:
+        arguments:
+            - '@file_locator'
+        tags:
+            - { name: routing.loader }
+
+    Enhavo\Bundle\AppBundle\Vue\RouteProvider\VueRouteProviderInterface:
+        alias: Enhavo\Bundle\AppBundle\Vue\RouteProvider\ChainVueRouteProvider
+
+    Enhavo\Bundle\AppBundle\Vue\RouteProvider\ChainVueRouteProvider:
+        arguments:
+            - '%enhavo_app.vue.route_providers%'
+            - '@Enhavo\Component\Type\FactoryInterface[VueRouteProvider]'
+
+    Enhavo\Bundle\AppBundle\Vue\RouteProvider\FileVueRouteProviderType:
+        arguments:
+            - '%kernel.project_dir%'
+        tags:
+            - { name: 'enhavo_app.vue_route_provider' }
+
+    Enhavo\Bundle\AppBundle\Vue\RouteProvider\RoutingVueRouteProviderType:
+        arguments:
+            - '@router'
+        tags:
+            - { name: 'enhavo_app.vue_route_provider' }
+
+    Enhavo\Bundle\AppBundle\Profiler\TemplateEndpointDataCollector:
+        arguments:
+            - '@Enhavo\Bundle\ApiBundle\Profiler\EndpointDataCollector'
+            - '@router'
+        tags:
+            - { name: data_collector, id: 'template_endpoint', priority: 90 }

@@ -1,6 +1,10 @@
 login:
     error:
         credentials: 'Bad credentials'
+        password_expired: 'Your password expired. Please check your inbox and reset your password with the provided link.'
+        max_failed_attempts: 'Too many failed login attempts. Please check your inbox and reset your password with the provided link.'
+        disabled: 'The user is disabled.'
+        verification_required: 'You must verify your email first. Please check your inbox and use the provided  verify link.'
 group:
     edit:
         submit: 'Update group'
@@ -53,14 +57,18 @@ user:
         id: 'ID'
         user: 'User'
         email: 'Email'
+
 reset_password:
     label:
         login: 'Login'
     request:
         username: 'Username or email address'
         submit: 'Reset password'
+        email: 'Please Check your Emails'
     confirm:
         submit: 'Change password'
+        invalid_token: 'The token is invalid'
+        renew_request: 'Renew request'
     flash:
         message:
             success: 'The password has been reset successfully.'
@@ -87,14 +95,9 @@ change_email:
     mail:
         subject: 'Email-Address Changed'
         text: |
-            Hello %username%!
-
-            Your email address was changed from %old_email% to %new_email%.
-            Please use %username% as login identifier from now.
-            If you do not receive this email on your %new_email% inbox, please login to your account and change it back!
-
-            Regards,
-            the Team.
+            Hello!
+            
+            to change your email, please click the following link: 
 
 confirmation:
     form:
@@ -112,6 +115,7 @@ confirmation:
 
             Regards,
             the Team.
+
 security:
     login:
         username: 'Username'
@@ -119,7 +123,12 @@ security:
         password: 'Password'
         remember_me: 'Remember me'
         submit: 'Log in'
+
 change_password:
+    label:
+        edit: 'Change password'
+    form:
+        submit: 'Save'
     message:
         success: 'Password changed'
         error: 'Error'
@@ -157,3 +166,14 @@ profile:
     update:
         success: 'Profile updated successfully'
         error: 'Update failed'
+
+verification:
+    mail:
+        subject: Verify your Email
+        text:  |
+            Hello %username%!
+
+            Please click on the following link to to verify your email address %confirmation_url%
+
+            Regards,
+            the Team.

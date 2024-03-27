@@ -11,16 +11,15 @@ namespace Enhavo\Bundle\ShopBundle\Repository;
 use Enhavo\Bundle\AppBundle\Repository\EntityRepositoryInterface;
 use Enhavo\Bundle\AppBundle\Repository\EntityRepositoryTrait;
 use Enhavo\Bundle\ShopBundle\Model\OrderInterface;
+use Enhavo\Bundle\ShopBundle\State\OrderCheckoutStates;
+use Enhavo\Bundle\UserBundle\Model\UserInterface;
 use Sylius\Bundle\OrderBundle\Doctrine\ORM\OrderRepository as SyliusOrderRepository;
 
 class OrderRepository extends SyliusOrderRepository implements EntityRepositoryInterface
 {
     use EntityRepositoryTrait;
 
-    /**
-     * @return OrderInterface[]
-     */
-    public function findLastNumber()
+    public function findLastNumber(): OrderInterface
     {
         $query = $this->createQueryBuilder('n');
         $query->addSelect('ABS(n.number) AS HIDDEN nr');
@@ -29,17 +28,18 @@ class OrderRepository extends SyliusOrderRepository implements EntityRepositoryI
         return $query->getQuery()->getResult();
     }
 
-    public function findByPaymentId($id)
+    public function findCheckoutOrdersBetween(\DateTime $startTime, \DateTime $endTime)
     {
-        $query = $this->createQueryBuilder('o');
-        $query->join('o.payment', 'p');
-        $query->where('p.id = :id');
-        $query->setParameter('id', $id);
-        $result =  $query->getQuery()->getResult();
-        if(count($result)) {
-            return $result[0];
-        }
-        return null;
+        $qb = $this->createQueryBuilder("o");
+        $qb
+            ->andWhere('o.checkoutCompletedAt > :startTime')
+            ->andWhere('o.checkoutCompletedAt < :endTime')
+            ->andWhere('o.checkoutState = :state')
+            ->setParameter('state', OrderCheckoutStates::STATE_COMPLETED)
+            ->setParameter('startTime', $startTime)
+            ->setParameter('endTime', $endTime)
+        ;
+        return $qb->getQuery()->getResult();
     }
 
     public function findByToken($token)
@@ -49,5 +49,53 @@ class OrderRepository extends SyliusOrderRepository implements EntityRepositoryI
         ]);
     }
 
+    public function findLastOrder(UserInterface $user): ?OrderInterface
+    {
+        $orders = $this->findBy([
+            'user' => $user,
+            'checkoutState' => OrderCheckoutStates::STATE_COMPLETED
+        ], [
+            'updatedAt' => 'DESC'
+        ], 1);
 
+        if(count($orders)) {
+            return $orders[0];
+        }
+        return null;
+    }
+
+    public function findByUser(UserInterface $user)
+    {
+        return $this->findBy([
+            'user' => $user,
+            'checkoutState' => OrderCheckoutStates::STATE_COMPLETED
+        ], [
+            'updatedAt' => 'DESC'
+        ]);
+    }
+
+    public function countByUser(UserInterface $user, \DateTime $from = null, \DateTime $to = null)
+    {
+        $qb = $this->createQueryBuilder("o");
+        $qb->select('COUNT(o.id)');
+
+        if ($from) {
+            $qb->andWhere('o.checkoutCompletedAt > :startTime');
+            $qb->setParameter('startTime', $from);
+        }
+
+        if ($to) {
+            $qb->andWhere('o.checkoutCompletedAt < :endTime');
+            $qb->setParameter('endTime', $to);
+        }
+
+        $qb->andWhere('o.state NOT IN (:states)');
+        $qb->setParameter('states', [OrderInterface::STATE_CART, OrderInterface::STATE_CANCELLED]);
+
+        $qb->join('o.user', 'u');
+        $qb->andWhere('u.id = :id');
+        $qb->setParameter('id', $user->getId());
+
+        return $qb->getQuery()->getSingleScalarResult();
+    }
 }

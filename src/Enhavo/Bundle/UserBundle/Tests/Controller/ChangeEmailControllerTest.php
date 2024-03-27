@@ -6,18 +6,16 @@
 
 namespace Controller;
 
-use Enhavo\Bundle\AppBundle\Template\TemplateManager;
+use Enhavo\Bundle\AppBundle\Template\TemplateResolver;
 use Enhavo\Bundle\FormBundle\Error\FormErrorResolver;
 use Enhavo\Bundle\UserBundle\Configuration\ChangeEmail\ChangeEmailRequestConfiguration;
 use Enhavo\Bundle\UserBundle\Configuration\ConfigurationProvider;
-use Enhavo\Bundle\UserBundle\Configuration\Login\LoginConfiguration;
 use Enhavo\Bundle\UserBundle\Controller\ChangeEmailController;
 use Enhavo\Bundle\UserBundle\Model\User;
 use Enhavo\Bundle\UserBundle\Repository\UserRepository;
 use Enhavo\Bundle\UserBundle\Tests\Mocks\UserMock;
 use Enhavo\Bundle\UserBundle\User\UserManager;
 use PHPUnit\Framework\MockObject\MockObject;
-use PHPUnit\Framework\TestCase;
 use Sylius\Component\Resource\Factory\FactoryInterface;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -26,6 +24,7 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class ChangeEmailControllerTest //extends TestCase
@@ -48,8 +47,8 @@ class ChangeEmailControllerTest //extends TestCase
         $dependencies->userManager = $this->getMockBuilder(UserManager::class)->disableOriginalConstructor()->getMock();
         $dependencies->userRepository = $this->getMockBuilder(UserRepository::class)->disableOriginalConstructor()->getMock();
         $dependencies->configurationProvider = $this->getMockBuilder(ConfigurationProvider::class)->disableOriginalConstructor()->getMock();
-        $dependencies->templateManager = $this->getMockBuilder(TemplateManager::class)->disableOriginalConstructor()->getMock();
-        $dependencies->templateManager->method('getTemplate')->willReturnCallback(function ($template) {
+        $dependencies->templateResolver = $this->getMockBuilder(TemplateResolver::class)->disableOriginalConstructor()->getMock();
+        $dependencies->templateResolver->method('resolve')->willReturnCallback(function ($template) {
             return $template .'.managed';
         });
         $dependencies->userFactory = $this->getMockBuilder(FactoryInterface::class)->getMock();
@@ -95,12 +94,11 @@ class ChangeEmailControllerTest //extends TestCase
         $dependencies->provider->method('getChangeMailRequestConfiguration')->willReturnCallback(function() {
             $configuration = new ChangeEmailRequestConfiguration();
             $configuration->setRoute('config.login.route');
-            $configuration->set('config.login.route');
             return $configuration;
         });
 
         $dependencies->userFactory->method('createNew')->willReturn(new User());
-        $dependencies->userManager->method('getTemplate')->willReturn('request.html.twig');
+        $dependencies->userManager->method('resolve')->willReturn('request.html.twig');
         $dependencies->userManager->expects($this->once())->method('getRedirectRoute')->willReturn('redirect.route');
 
         $controller = $this->createInstance($dependencies);
@@ -144,7 +142,7 @@ class ChangeEmailControllerTest //extends TestCase
         $dependencies = $this->createDependencies();
         $dependencies->request->method('isXmlHttpRequest')->willReturn(true);
         $dependencies->userFactory->method('createNew')->willReturn(new User());
-        $dependencies->userManager->method('getTemplate')->willReturn('request.html.twig');
+        $dependencies->userManager->method('resolve')->willReturn('request.html.twig');
         $dependencies->userManager->method('getStylesheets')->willReturn([]);
         $dependencies->userManager->method('getJavascripts')->willReturn([]);
         $dependencies->userManager->expects($this->once())->method('getRedirectRoute')->willReturn('redirect.route');
@@ -185,7 +183,7 @@ class ChangeEmailControllerTest //extends TestCase
     public function testCheck()
     {
         $dependencies = $this->createDependencies();
-        $dependencies->userManager->method('getTemplate')->willReturnCallback(function ($config, $action) {
+        $dependencies->userManager->method('resolve')->willReturnCallback(function ($config, $action) {
             $this->assertEquals('theme', $config);
             $this->assertEquals('change_email_check', $action);
 
@@ -214,8 +212,8 @@ class ChangeEmailControllerTestDependencies
     /** @var UserRepository|MockObject */
     public $userRepository;
 
-    /** @var TemplateManager|MockObject */
-    public $templateManager;
+    /** @var TemplateResolver|MockObject */
+    public $templateResolver;
 
     /** @var FactoryInterface|MockObject */
     public $userFactory;
@@ -259,12 +257,12 @@ class ChangeEmailControllerMock extends ChangeEmailController
         return $this->flashMessages;
     }
 
-    protected function addFlash(string $type, $message)
+    protected function addFlash(string $type, $message): void
     {
         $this->flashMessages[$type] = $message;
     }
 
-    protected function getUser()
+    protected function getUser(): ?UserInterface
     {
         return new UserMock();
     }

@@ -3,7 +3,7 @@ services:
         arguments:
             - '@Enhavo\Bundle\BlockBundle\Block\BlockManager'
         tags:
-            - { name: console.command, command: 'enhavo:block:clean-up' }
+            - { name: console.command }
 
     Enhavo\Bundle\BlockBundle\Maker\MakeBlock:
         arguments:
@@ -14,9 +14,20 @@ services:
         tags:
             - { name: 'maker.command' }
 
+    Enhavo\Bundle\BlockBundle\Maker\MakeBlockEndpointData:
+        arguments:
+            - '@Enhavo\Bundle\BlockBundle\Block\BlockManager'
+            - '@enhavo_block.factory.block'
+            - '@kernel'
+            - '@filesystem'
+            - '@Enhavo\Bundle\ApiBundle\Normalizer\DataNormalizer'
+            - '@enhavo_block.factory.node'
+        tags:
+            - { name: 'maker.command' }
+
     Enhavo\Bundle\BlockBundle\Command\DebugBlockUseCommand:
         arguments:
             - '@doctrine.orm.entity_manager'
             - '@Enhavo\Bundle\BlockBundle\Block\BlockManager'
         tags:
-            - { name: console.command, command: 'debug:enhavo:block' }
+            - { name: console.command }

@@ -6,7 +6,9 @@ services:
             - 'Action'
 
     enhavo_app.action_manager:
-        class: Enhavo\Bundle\AppBundle\Action\ActionManager
+        alias: Enhavo\Bundle\AppBundle\Action\ActionManager
+
+    Enhavo\Bundle\AppBundle\Action\ActionManager:
         arguments:
             - '@enhavo_app.action_collector'
             - '@security.authorization_checker'
@@ -88,6 +90,12 @@ services:
         tags:
             - { name: enhavo.action, alias: event }
 
+    Enhavo\Bundle\AppBundle\Action\Type\FormActionType:
+        parent: Enhavo\Bundle\AppBundle\Action\AbstractUrlActionType
+        public: true
+        tags:
+            - { name: enhavo.action, alias: form }
+
     Enhavo\Bundle\AppBundle\Action\Type\FilterActionType:
         parent: Enhavo\Bundle\AppBundle\Action\AbstractActionType
         public: true
@@ -99,6 +107,12 @@ services:
         public: true
         tags:
             - { name: enhavo.action, alias: update }
+
+    Enhavo\Bundle\AppBundle\Action\Type\TransitionActionType:
+        parent: Enhavo\Bundle\AppBundle\Action\AbstractUrlActionType
+        public: true
+        tags:
+            - { name: enhavo.action, alias: transition }
 
     Enhavo\Bundle\AppBundle\Action\Type\ModalActionType:
         parent: Enhavo\Bundle\AppBundle\Action\AbstractActionType

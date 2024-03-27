@@ -1,8 +1,8 @@
 enhavo_search:
     search:
-        indexing: true
+        dsn: '%env(resolve:SEARCH_DSN)%'
     index:
         classes:
             - Enhavo\Bundle\PageBundle\Entity\Page
             - Enhavo\Bundle\ArticleBundle\Entity\Article
-            - Enhavo\Bundle\ShopBundle\Entity\Product
+            - Enhavo\Bundle\ShopBundle\Entity\ProductVariant

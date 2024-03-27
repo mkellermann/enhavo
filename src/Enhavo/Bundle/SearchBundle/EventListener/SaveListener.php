@@ -2,7 +2,8 @@
 
 namespace Enhavo\Bundle\SearchBundle\EventListener;
 
-use Sylius\Bundle\ResourceBundle\Event\ResourceControllerEvent;
+use Enhavo\Bundle\AppBundle\Event\ResourceEvent;
+use Enhavo\Bundle\SearchBundle\Engine\SearchEngineInterface;
 use Symfony\Component\DependencyInjection\ContainerAwareTrait;
 
 /*
@@ -10,18 +11,14 @@ use Symfony\Component\DependencyInjection\ContainerAwareTrait;
  */
 class SaveListener
 {
-    use ContainerAwareTrait;
-
-    /**
-     * @param ResourceControllerEvent $event
-     */
-    public function onSave(ResourceControllerEvent $event)
+    public function __construct(
+        private readonly SearchEngineInterface $searchEngine
+    )
     {
-        if($this->container->getParameter('enhavo_search.search.indexing')) {
-            //get the right index engine
-            $engine = $this->container->getParameter('enhavo_search.search.engine');
-            $indexEngine = $this->container->get($engine);
-            $indexEngine->index($event->getSubject());
-        }
+    }
+
+    public function onSave(ResourceEvent $event)
+    {
+        $this->searchEngine->index($event->getSubject());
     }
 }

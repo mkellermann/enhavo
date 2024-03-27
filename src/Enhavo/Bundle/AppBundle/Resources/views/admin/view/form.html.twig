@@ -1,9 +1,9 @@
-{% extends template('admin/view/base.html.twig') %}
+{% extends template('admin/view/app.html.twig') %}
 
 {% form_theme form with form_themes %}
 
 {% block content %}
-    <div id="app"></div>
+    {{ parent() }}
     <div data-tab-container style="display: none">
         {% for key,tab in tabs %}
             <div data-tab="{{ key }}">

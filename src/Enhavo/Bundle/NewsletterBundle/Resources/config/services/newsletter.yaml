@@ -22,7 +22,7 @@ services:
           - '@enhavo_app.util.secure_url_token_generator'
           - '@logger'
           - '@twig'
-          - '@enhavo_app.template.manager'
+          - '@Enhavo\Bundle\AppBundle\Template\TemplateResolverInterface'
           - '@Enhavo\Bundle\NewsletterBundle\Newsletter\ParameterParser'
           - '@enhavo_newsletter.newsletter.provider'
           - '%enhavo_newsletter.newsletter.mail.from%'
@@ -48,10 +48,8 @@ services:
             - '@Enhavo\Bundle\NewsletterBundle\Newsletter\NewsletterManager'
             - '@doctrine.orm.entity_manager'
             - '@logger'
-        calls:
-            - [setContainer, ['@service_container']]
         tags:
-            - { name: console.command, command: 'enhavo:newsletter:send' }
+            - { name: console.command }
 
     Enhavo\Bundle\NewsletterBundle\Column\NewsletterStateColumnType:
         public: true

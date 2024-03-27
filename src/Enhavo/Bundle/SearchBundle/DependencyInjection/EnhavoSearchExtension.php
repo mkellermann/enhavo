@@ -23,12 +23,9 @@ class EnhavoSearchExtension extends Extension implements PrependExtensionInterfa
     {
         $configuration = new Configuration();
         $config = $this->processConfiguration($configuration, $configs);
-        $container->setParameter('enhavo_search.search.indexing', $config['search']['indexing']);
+        $container->setParameter('enhavo_search.search.dsn', $config['search']['dsn']);
         $container->setParameter('enhavo_search.search.template', $config['search']['template']);
-        $container->setParameter('enhavo_search.search.engine', $config['search']['engine']);
-        $container->setParameter('enhavo_search.elastica.host', $config['elastica']['host']);
-        $container->setParameter('enhavo_search.elastica.port', $config['elastica']['port']);
-        $container->setParameter('enhavo_search.elastica.version', $config['elastica']['version']);
+        $container->setParameter('enhavo_search.elastic.version', $config['elastic']['version']);
         $container->setParameter('enhavo_search.index.class', $config['index']['classes']);
         $container->setParameter('enhavo_search.metadata', $config['metadata']);
 
@@ -39,10 +36,8 @@ class EnhavoSearchExtension extends Extension implements PrependExtensionInterfa
 
         $loader = new Loader\YamlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
         $loader->load('services/services.yaml');
-        $loader->load('services/general.yaml');
         $loader->load('services/metadata.yaml');
-        $loader->load('services/extractor.yaml');
-        $loader->load('services/indexer.yaml');
+        $loader->load('services/index.yaml');
         $loader->load('services/elastic_search.yaml');
         $loader->load('services/database.yaml');
         $loader->load('services/filter.yaml');

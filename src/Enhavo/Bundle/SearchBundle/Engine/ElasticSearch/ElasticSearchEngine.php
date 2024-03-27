@@ -9,146 +9,107 @@
 namespace Enhavo\Bundle\SearchBundle\Engine\ElasticSearch;
 
 use Doctrine\ORM\EntityManager;
+use Elastica\Client;
+use Elastica\Index;
+use Enhavo\Bundle\DoctrineExtensionBundle\EntityResolver\EntityResolverInterface;
 use Enhavo\Bundle\SearchBundle\Engine\Filter\BetweenQuery;
 use Enhavo\Bundle\SearchBundle\Engine\Filter\ContainsQuery;
 use Enhavo\Bundle\SearchBundle\Engine\Filter\Filter;
 use Enhavo\Bundle\SearchBundle\Engine\Filter\MatchQuery;
+use Enhavo\Bundle\SearchBundle\Engine\Result\EntitySubjectLoader;
+use Enhavo\Bundle\SearchBundle\Engine\Result\ResultEntry;
+use Enhavo\Bundle\SearchBundle\Engine\Result\ResultSummary;
 use Enhavo\Bundle\SearchBundle\Exception\FilterQueryNotSupportedException;
 use Enhavo\Bundle\SearchBundle\Exception\IndexException;
-use Enhavo\Bundle\SearchBundle\Filter\FilterData;
-use Enhavo\Bundle\SearchBundle\Metadata\Filter as MetadataFilter;
+use Enhavo\Bundle\SearchBundle\Filter\FilterDataProvider;
+use Pagerfanta\Adapter\ArrayAdapter;
 use Pagerfanta\Pagerfanta;
 use Enhavo\Component\Metadata\MetadataRepository;
-use Enhavo\Bundle\SearchBundle\Engine\EngineInterface;
-use Enhavo\Bundle\SearchBundle\Extractor\Extractor;
-use Enhavo\Bundle\SearchBundle\Indexer\Indexer;
+use Enhavo\Bundle\SearchBundle\Engine\SearchEngineInterface;
+use Enhavo\Bundle\SearchBundle\Index\IndexDataProvider;
 use Enhavo\Bundle\SearchBundle\Metadata\Metadata;
-use Elastica\Client;
 use Elastica\Document;
 use Elastica\Search;
 use Elastica\Query;
-use Elastica\Type\Mapping;
+use Elastica\Mapping;
 
-class ElasticSearchEngine implements EngineInterface
+class ElasticSearchEngine implements SearchEngineInterface
 {
-    const ELASTIC_SEARCH_INDEX = 'elastic_search';
-    const ELASTIC_SEARCH_TYPE = 'document';
-
-    /**
-     * @var Indexer
-     */
-    private $indexer;
-
-    /**
-     * @var MetadataRepository
-     */
-    private $metadataRepository;
-
-    /**
-     * @var Client
-     */
-    private $client;
-
-    /**
-     * @var EntityManager
-     */
-    private $em;
-
-    /**
-     * @var Extractor
-     */
-    private $extractor;
-
-    /**
-     * @var FilterData
-     */
-    private $filterData;
-
-    /**
-     * @var string[]
-     */
-    private $classes;
-
-    /** @var bool */
-    private $indexing;
+    private readonly ?Client $client;
+    private readonly string $indexName;
 
     public function __construct(
-        Indexer $indexer,
-        MetadataRepository $metadataRepository,
-        EntityManager $em,
-        Client $client,
-        Extractor $extractor,
-        FilterData $filterData,
-        $classes,
-        $indexing
+        private readonly IndexDataProvider $indexDataProvider,
+        private readonly MetadataRepository $metadataRepository,
+        private readonly EntityManager $em,
+        private readonly ElasticSearchIndexRemover $indexRemover,
+        private readonly ElasticSearchDocumentIdGenerator $documentIdGenerator,
+        private readonly FilterDataProvider $filterDataProvider,
+        private readonly EntityResolverInterface $entityResolver,
+        private readonly array $classes,
+        ClientFactory $clientFactory,
+        $dsn,
     ) {
-        $this->indexer = $indexer;
-        $this->metadataRepository = $metadataRepository;
-        $this->em = $em;
-        $this->client = $client;
-        $this->extractor = $extractor;
-        $this->filterData = $filterData;
-        $this->classes = $classes;
-        $this->indexing = $indexing;
+        $this->indexName = $clientFactory->getIndexName($dsn);
+        $this->client = $clientFactory->create($dsn);
     }
 
-    public function initialize()
+    public function initialize($force = false): void
     {
         $index = $this->getIndex();
-        if(!$index->exists()) {
+        if (!$index->exists()) {
+            $index->create();
+        } else if ($index->exists() && $force) {
+            $index->delete();
             $index->create();
         }
 
         $mapping = new Mapping();
-        $mapping->setType($this->getType());
 
         $indexData = [];
         for ($i = 0; $i <= 100; $i++) {
-            $indexData['value.' . $i] = array('type' => 'text', 'boost' => $i);
+            $indexData['value.' . $i] = ['type' => 'text'];
         }
 
         $filterData = [];
-        foreach($this->classes as $class) {
+        foreach ($this->classes as $class) {
             /** @var Metadata $metadata */
-            $metadata = $this->metadataRepository->getMetadata($class);
-            $filters = $metadata->getFilters();
 
-            /** @var MetadataFilter $filter */
-            foreach($filters as $filter) {
-                $filterData[$filter->getKey()] = [
-                    'type' => $this->mapDataType($filter->getDataType())
+            $fields = $this->filterDataProvider->getFields($class);
+
+            foreach ($fields as $field) {
+                $filterData[$field->getKey()] = [
+                    'type' => $this->mapDataType($field->getFieldType())
                 ];
             }
         }
 
-        $mapping->setProperties(array(
-            'id' => array('type' => 'keyword'),
-            'className' => array('type' => 'keyword'),
-            'indexData' => array(
+        $mapping->setProperties([
+            'id' => ['type' => 'keyword'],
+            'className' => ['type' => 'keyword'],
+            'indexData' => [
                 'type' => 'object',
                 'properties' => $indexData
-            ),
-            'filterData' => array(
+            ],
+            'filterData' => [
                 'type' => 'object',
                 'properties' => $filterData
-            ),
-        ));
+            ],
+        ]);
 
-        $mapping->send();
+        $mapping->send($this->getIndex());
     }
 
     private function mapDataType($type)
     {
-        if($type == null) {
+        if ($type == null) {
             return 'keyword';
+        } else if ($type === 'string') {
+            return 'keyword';
+        } else if ($type === 'bool') {
+            return 'boolean';
         }
 
-        return $type;
-    }
-
-    private function getType()
-    {
-        $type = $this->getIndex()->getType(self::ELASTIC_SEARCH_TYPE);
         return $type;
     }
 
@@ -159,32 +120,85 @@ class ElasticSearchEngine implements EngineInterface
     private function createQuery(Filter $filter)
     {
         $query = new Query\BoolQuery();
+        $this->applyTermQueries($filter, $query);
+        $this->applyFilterQueries($filter, $query);
+        return $this->createMasterQuery($filter, $query);
+    }
 
-        if($filter->getTerm()) {
-            for($i = 1; $i <= 100; $i++) {
-                $query->addShould(new Query\Match(sprintf('indexData.value.%s', $i), $filter->getTerm()));
+    private function createSuggestQuery(Filter $filter)
+    {
+        $query = new Query\BoolQuery();
+        $this->applySuggestQueries($filter, $query);
+        $this->applyFilterQueries($filter, $query);
+        return $this->createMasterQuery($filter, $query);
+    }
+
+    private function applyTermQueries(Filter $filter, Query\BoolQuery $query)
+    {
+        if ($filter->getTerm()) {
+            for ($i = 1; $i <= 100; $i++) {
+                $fieldName = sprintf('indexData.value.%s', $i);
+
+                $termQuery = new Query\MatchQuery($fieldName, [
+                    'query' => $filter->getTerm(),
+                ]);
+
+                if ($filter->isFuzzy()) {
+                    $termQuery->setFieldParam($fieldName, 'fuzziness', 2);
+                }
+
+                $constantScoreQuery = new Query\ConstantScore($termQuery);
+                $constantScoreQuery->setBoost($i);
+
+                $query->addShould($constantScoreQuery);
             }
             $query->setMinimumShouldMatch(1);
         }
+    }
 
-        foreach($filter->getQueries() as $key => $filterQuery) {
+    private function applySuggestQueries(Filter $filter, Query\BoolQuery $query)
+    {
+        if ($filter->getTerm()) {
+            for ($i = 1; $i <= 100; $i++) {
+                $fieldName = sprintf('indexData.value.%s', $i);
+
+                $termQuery = new Query\MatchPhrasePrefix($fieldName, [
+                    'query' => $filter->getTerm(),
+                ]);
+
+                $constantScoreQuery = new Query\ConstantScore($termQuery);
+                $constantScoreQuery->setBoost($i);
+
+                $query->addShould($constantScoreQuery);
+            }
+            $query->setMinimumShouldMatch(1);
+        }
+    }
+
+    private function applyFilterQueries(Filter $filter, Query\BoolQuery $query)
+    {
+        foreach ($filter->getQueries() as $key => $filterQuery) {
             $fieldName = sprintf('filterData.%s', $key);
             $query->addFilter($this->createFilterQuery($fieldName, $filterQuery));
         }
 
-        if($filter->getClass()) {
+        if ($filter->getClass()) {
             $termQuery = new Query\Term();
             $termQuery->setTerm('className', $filter->getClass());
             $query->addFilter($termQuery);
         }
+    }
 
-        $masterQuery =  new Query($query);
-        if($filter->getLimit() !== null) {
+    private function createMasterQuery(Filter $filter, Query\BoolQuery $query)
+    {
+        $masterQuery = new Query($query);
+
+        if ($filter->getLimit() !== null) {
             $masterQuery->setSize(intval($filter->getLimit()));
         }
-        if($filter->getOrderBy() !== null) {
+        if ($filter->getOrderBy() !== null) {
             $direction = $filter->getOrderDirection();
-            if(empty($direction)) {
+            if (empty($direction)) {
                 $direction = 'ASC';
             }
             $masterQuery->addSort([sprintf('filterData.%s', $filter->getOrderBy()) => $direction]);
@@ -195,12 +209,12 @@ class ElasticSearchEngine implements EngineInterface
 
     private function createFilterQuery($fieldName, $filterQuery)
     {
-        if($filterQuery instanceof MatchQuery) {
-            if($filterQuery->getOperator() == MatchQuery::OPERATOR_EQUAL) {
+        if ($filterQuery instanceof MatchQuery) {
+            if ($filterQuery->getOperator() == MatchQuery::OPERATOR_EQUAL) {
                 $query = new Query\Term();
                 $query->setTerm($fieldName, $filterQuery->getValue());
                 return $query;
-            } elseif($filterQuery->getOperator() == MatchQuery::OPERATOR_NOT) {
+            } elseif ($filterQuery->getOperator() == MatchQuery::OPERATOR_NOT) {
                 $query = new Query\Term();
                 $query->setTerm($fieldName, $filterQuery->getValue());
                 $boolQuery = new Query\BoolQuery();
@@ -216,7 +230,7 @@ class ElasticSearchEngine implements EngineInterface
                 $query = new Query\Range($fieldName, [$operatorMap[$filterQuery->getOperator()] => $filterQuery->getValue()]);
                 return $query;
             }
-        } elseif($filterQuery instanceof BetweenQuery) {
+        } elseif ($filterQuery instanceof BetweenQuery) {
             $operatorFromMap = [
                 BetweenQuery::OPERATOR_THAN => 'gt',
                 BetweenQuery::OPERATOR_EQUAL_THAN => 'gte',
@@ -230,7 +244,7 @@ class ElasticSearchEngine implements EngineInterface
                 $operatorToMap[$filterQuery->getOperatorTo()] => $filterQuery->getTo()
             ]);
             return $query;
-        } elseif($filterQuery instanceof ContainsQuery) {
+        } elseif ($filterQuery instanceof ContainsQuery) {
             $boolQuery = new Query\BoolQuery();
             foreach ($filterQuery->getValues() as $value) {
                 $term = new Query\Term([$fieldName => $value]);
@@ -241,52 +255,123 @@ class ElasticSearchEngine implements EngineInterface
         throw new FilterQueryNotSupportedException(sprintf('Filter query from type "%s" is not supported', get_class($filterQuery)));
     }
 
-    public function search(Filter $filter)
+    public function search(Filter $filter): ResultSummary
     {
         $search = new Search($this->client);
-        $search->addIndex(self::ELASTIC_SEARCH_INDEX);
+        $search->addIndex($this->getIndex());
         $search->setQuery($this->createQuery($filter));
 
-        $result = [];
-        foreach($search->search() as $document) {
+        $entries = $this->getSearchEntries($search);
+        $summary = new ResultSummary($entries, count($entries));
+        return $summary;
+    }
+
+    private function getSearchEntries(Search $search)
+    {
+        $entries = [];
+        foreach ($search->search() as $document) {
             $data = $document->getData();
             $id = $data['id'];
             $className = $data['className'];
-            $result[] = $this->em->getRepository($className)->find($id);
+            $entries[] = new ResultEntry(new EntitySubjectLoader($this->entityResolver, $className, $id), $data['filterData'], $document->getScore());
         }
-        return $result;
+        return $entries;
     }
 
-    public function searchPaginated(Filter $filter)
+    public function suggest(Filter $filter): array
     {
-        $query = $this->createQuery($filter);
-        $searchable = $this->getIndex();
-        return new Pagerfanta(new ElasticaORMAdapter($searchable, $query, $this->em));
+        $filter->setFuzzy(false);
+        $filter->setLimit(10);
+
+        $search = new Search($this->client);
+        $index = $this->getIndex();
+        $search->addIndex($index);
+        $search->setQuery($this->createSuggestQuery($filter));
+
+        $cannonicalTerm = strtolower($filter->getTerm());
+
+        // build a map with all words and add their weights
+        $suggestionMap = [];
+        foreach ($search->search() as $document) {
+            $data = $document->getData();
+            foreach ($data['indexData'] as $key => $value) {
+                $text = join(' ', $value);
+                $weight = intval(substr($key, 6));
+
+                $token = $index->analyze([
+                    "analyzer" => "standard",
+                    "text" => $text
+                ]);
+
+                foreach ($token as $token) {
+                    $cannonicalToken = strtolower($token['token']);
+                    if (str_starts_with($cannonicalToken, $cannonicalTerm)) {
+                        if (!isset($suggestionMap[$cannonicalToken])) {
+                            $suggestionMap[$cannonicalToken] = [];
+                        }
+                        $suggestionMap[$cannonicalToken][] = $weight;
+                    }
+                }
+            }
+        }
+
+        $suggestionScore = [];
+        foreach ($suggestionMap as $key => $value) {
+            $max = $suggestionMap[$key] = max($value);
+            $total = $suggestionMap[$key] = array_sum($value);
+            $occur = $suggestionMap[$key] = count($value);
+
+            // we want the maximum score to count as most important, but we have to rank the words against each other,
+            // so we use the average weight, but give them less impact to the result
+            $score = $max + ($total / $occur / 100);
+
+            $suggestionScore[] = [
+                'term' => $key,
+                'score' => $score
+            ];
+        }
+
+        usort($suggestionScore, function ($a, $b) {
+            return $b['score'] > $a['score'] ? 1 : -1;
+        });
+
+        $suggestions = [];
+        foreach ($suggestionScore as $suggestion) {
+            $suggestions[] = $filter->getTerm() . substr($suggestion['term'], strlen($cannonicalTerm));
+        }
+        return $suggestions;
+    }
+
+    public function searchPaginated(Filter $filter): ResultSummary
+    {
+        $search = new Search($this->client);
+        $search->addIndex($this->getIndex());
+        $search->setQuery($this->createQuery($filter));
+
+        $entries = $this->getSearchEntries($search);
+        $pagerfanta = new Pagerfanta(new ArrayAdapter($entries));
+        $summary = new ResultSummary($pagerfanta, count($entries));
+        return $summary;
     }
 
     public function index($resource)
     {
-        if (!$this->indexing) {
-            return;
-        }
-
         /** @var Metadata $metadata */
         $metadata = $this->metadataRepository->getMetadata($resource);
-        if($metadata && in_array($metadata->getClassName(), $this->classes)) {
+        if ($metadata && in_array($metadata->getClassName(), $this->classes)) {
             $index = $this->getIndex();
             $document = $this->createDocument($resource);
-            $type = $this->getType();
-            $type->addDocument($document);
+            $index->addDocument($document);
             $index->refresh();
         }
     }
 
     /**
-     * @return \Elastica\Index
+     * @return Index
      */
     private function getIndex()
     {
-        $index = $this->client->getIndex(self::ELASTIC_SEARCH_INDEX);
+        $index = $this->client->getIndex($this->indexName);
         return $index;
     }
 
@@ -298,24 +383,24 @@ class ElasticSearchEngine implements EngineInterface
     {
         /** @var Metadata $metadata */
         $metadata = $this->metadataRepository->getMetadata($resource);
-        $indexes = $this->indexer->getIndexes($resource);
+        $indexes = $this->indexDataProvider->getIndexData($resource);
 
         $id = $resource->getId();
         $className = $metadata->getClassName();
-        $documentId = sha1($id.$className);
+        $documentId = $this->documentIdGenerator->generateDocumentId($className, $id);
 
         $indexData = [];
         foreach($indexes as $index) {
             $weight = intval($index->getWeight());
             $key = 'value.'.$weight;
-            if(!array_key_exists($key, $indexData)) {
+            if (!array_key_exists($key, $indexData)) {
                 $indexData[$key] = [];
             }
             $indexData[$key][] = $index->getValue();
         }
 
         $filterData = [];
-        foreach($this->filterData->getData($resource) as $data) {
+        foreach ($this->filterDataProvider->getFilterData($resource) as $data) {
             $filterData[$data->getKey()] = $data->getValue();
         }
 
@@ -332,20 +417,7 @@ class ElasticSearchEngine implements EngineInterface
 
     public function removeIndex($resource)
     {
-        if($this->metadataRepository->hasMetadata($resource)) {
-            /** @var Metadata $metadata */
-            $metadata = $this->metadataRepository->getMetadata($resource);
-
-            $id = $resource->getId();
-            $className = $metadata->getClassName();
-            $documentId = sha1($id.$className);
-
-            $type = $this->getType();
-            $type->deleteById($documentId);
-
-            $index = $this->getIndex();
-            $index->refresh();
-        }
+        $this->indexRemover->removeIndex($resource);
     }
 
     public function reindex()
@@ -355,7 +427,7 @@ class ElasticSearchEngine implements EngineInterface
         foreach ($this->classes as $class) {
             $repository = $this->em->getRepository($class);
             $entities = $repository->findAll();
-            foreach($entities as $entity) {
+            foreach ($entities as $entity) {
                 try {
                     $this->index($entity);
                 } catch (\Exception $e) {
@@ -368,5 +440,14 @@ class ElasticSearchEngine implements EngineInterface
                 }
             }
         }
+    }
+
+    public static function supports($dsn): bool
+    {
+        if (str_starts_with($dsn, 'elastic://')) {
+            return true;
+        }
+
+        return false;
     }
 }

@@ -43,10 +43,10 @@ class LocalePathResolver implements LocaleResolverInterface
     {
         $locales = $this->localeProvider->getLocales();
         $this->locale = $this->localeProvider->getDefaultLocale();
-        $request = $this->requestStack->getMasterRequest();
+        $request = $this->requestStack->getMainRequest();
         if ($request !== null) {
             $path = new HierarchicalPath($request->getPathInfo());
-            $segment = $path->getSegment(0);
+            $segment = $path->segments()[0];
             if (!empty($segment) && in_array($segment, $locales)) {
                 $this->locale = $segment;
             }

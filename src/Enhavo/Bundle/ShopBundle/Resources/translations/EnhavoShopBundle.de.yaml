@@ -8,14 +8,19 @@ checkout:
       label:
         paypal: Paypal
         debit: Lastschrift
+
 promotion:
+  label:
+    coupon: Coupon
+    coupons: Coupons
   coupon:
     form:
       label:
         code: Code
-      action:
-        redeem: Einlösen
-        cancel: Entfernen
+    action:
+      redeem: Einlösen
+      cancel: Entfernen
+      generate: Generieren
 
 voucher:
     label:
@@ -23,14 +28,40 @@ voucher:
         code: Code
         amount: Betrag
         availableAmount: Verfügbar
+        expiredAt: Ablaufdatum
+        enabled: Aktiviert
+        partialRedeemable: Teilweise einlösbar
+    message:
+        already_applied: Der Gutschein wird bereits verwendet
+        amount_exceeded: Der Wert des Gutscheins ist höher als der Warenkorbwert
+country:
+    label:
+        country: Land
+        code: Code
+        name: Name
+
+address:
+    label:
+        billingAddress: Rechnungsaddresse
+        shippingAddress: Lieferaddresse
+        sameAddress: Gleich Rechnungsaddresse
+
+shipping_method:
+    label:
+        shipping_method: Versand Methode
 
 label:
+  shipment: Versand
   product: Produkt
   order: Bestellung
-  sales: Umsatz
+  sales: Verkauf
   shop: Shop
+  tag: Tag
+  category: Kategorie
+  configuration: Einstellungen
+  catalog: Katalog
 
-mailer:
+mail:
   confirm:
     subject: Bestellung
   tracking:
@@ -50,7 +81,7 @@ order:
     ordered_at: Aufgegben am
     name: Name
     order: Bestellung
-    items: Posten
+    items: Poste
     address: Adresse
     payment: Bezahlung
     billing: Rechnung
@@ -79,27 +110,38 @@ order:
     shipped: Versendet
     cancelled: Storniert
     shippingMethod: Versandart
-
+    state: Status
+    shippingState: Versand
+    paymentState: Zahlung
+    voucher: Gutschein
   action:
     transfer: In den Warenkorb
     purchase: Bezahlen
-
+    cancel: Abbrechen
+    paid: Bezahlt
+    refund: Erstatten
+    ship: Versenden
+  shippingState:
+    ready: Versandbereit
+    partially_shipped: Teilweise versendet
+    shipped: Versendet
+    cancelled: Abgebrochen
+  paymentState:
+    awaiting_payment: Warte auf Zahlung
+    cancelled: Abgebrochen
+    paid: Gezahlt
+    partially_paid: Teilweise gezahlt
+    partially_refunded: Teilweise Retoure
+    refunded: Erstattet
+  state:
+    new: Neu
+    cancelled: Abgebrochen
+    fulfilled: Abschlossen
   form:
     label:
-      state:
-        label: Status
-        cancelled: Storniert
-        confirmed: Bestellt
-        returned: Retoure
-      payment:
-        label: Bezahlung
-        completed: Bezahlt
-        pending: Offen
-      shipping:
-        label: Versand
-        pending: Offen
-        ready: Versandfertig
-        shipped: Versendet
+      state: Status
+      payment: Bezahlung
+      shipping: Versand
 
 order_item:
   form:
@@ -119,6 +161,7 @@ product:
     product_option: Option
     product_attribute: Attribut
     product_association_type: Vereinigungstypen
+    promotion: Promotion
     dimension: Abmessungen
     options: Optionen
     meta: Meta
@@ -129,9 +172,12 @@ product:
     label:
       active: Aktiv
       product_association:
-        type: Vereinigungstypen
+      type: Vereinigungstypen
+      taxCategory: Steuer Kategorie
+      shippingRequired: Versand notwendig
       code: Code
       title: Titel
+      description: Beschreibung
       picture: Bild
       pictures: Bilder
       price: Preis
@@ -160,6 +206,10 @@ product_variant:
       generate: Varianten generieren
   form:
     label:
+      title: Titel
+      index: Indexiert
+      default: Standard
+      description: Beschreibung
       active: Aktiv
       picture: Bild
       pictures: Bilder
@@ -167,11 +217,6 @@ product_variant:
       reducedPrice: Reduzierter Preis
       reduced: Reduziert?
       shippingCategory: Versandkategorie
-      width: Breite
-      height: Höhe
-      depth: Tiefe
-      weight: Gewicht
-      volume: Volumen
       taxRate: Umsatzsteuer
       associations: Assoziationen
       code: Code
@@ -180,13 +225,20 @@ product_variant:
       customize: Individualisierung
       inventory: Inventar
       stock: Lagerbestand
-      stock_track: Lagerbestand verfolgen?
+      stock_tracked: Lagerbestand verfolgen?
       shipping_category: Versandkategorie
       shipping_required: Versand erforderlich?
+      overrideDescription: Beschreibung überschreiben?
+      overridePictures: Bilder überschreiben?
+      overridePrice: Preis überschreiben?
+      overrideTaxCategory: Steuer Kategorie überschreiben?
+      overrideShipping: Versand überschreiben?
+      overrideDimensions: Abmessungen überschreiben?
   label:
     title: Titel
     options: Optionen
     dimension: Abmessungen
+    customize: Anpassen
     meta: Meta
     create: Erstellen
     edit: Bearbeiten
@@ -208,6 +260,7 @@ product_attribute:
       name: 'Name'
       storage_type: Speichertyp
       position: Position
+      type: Typ
 
 tax:
   label:

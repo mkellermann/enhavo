@@ -1,19 +1,9 @@
-app_person_index:
-    options:
-        expose: true
-    path: /app/person/index
-    methods: [GET]
-    defaults:
-        _controller: app.controller.person:indexAction
-        _sylius:
-            viewer:
-
 app_term_occupation_auto_complete:
     options:
         expose: true
     path: /app/term/occupation/auto_complete
     defaults:
-        _controller: enhavo_form.controller.auto_complete:searchAction
+        _controller: enhavo_form.controller.auto_complete::searchAction
         _config:
             class: Enhavo\Bundle\TaxonomyBundle\Entity\Term
             repository:

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
-                  xmlns:gedmo="http://gediminasm.org/schemas/orm/doctrine-extensions-mapping">
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping">
     <entity name="Enhavo\Bundle\MediaBundle\Entity\File" table="media_file" repository-class="Enhavo\Bundle\MediaBundle\Repository\FileRepository">
         <id name="id" type="integer" column="id">
             <generator />
@@ -16,9 +15,8 @@
         <field name="library" type="boolean" nullable="true" />
         <field name="garbage" type="boolean" />
         <field name="garbageTimestamp" type="datetime" nullable="true" />
-        <field name="createdAt" type="datetime">
-            <gedmo:timestampable on="create" />
-        </field>
+        <field name="createdAt" type="datetime" />
+        <field name="garbageCheckedAt" type="datetime" nullable="true" />
 
         <one-to-many field="formats" target-entity="Enhavo\Bundle\MediaBundle\Model\FormatInterface" mapped-by="file">
             <cascade>

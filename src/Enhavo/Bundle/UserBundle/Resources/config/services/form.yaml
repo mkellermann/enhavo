@@ -16,6 +16,7 @@ services:
     Enhavo\Bundle\UserBundle\Form\Type\UserType:
         arguments:
             - '%enhavo_user.model.user.class%'
+            - '%enhavo_user.model.group.class%'
             - '@security.authorization_checker'
             - [default]
         tags:
@@ -33,6 +34,11 @@ services:
         arguments:
             - '%enhavo_user.model.group.class%'
             - [default]
+
+    Enhavo\Bundle\UserBundle\Form\Type\PermissionType:
+        tags:
+            - { name: form.type, alias: 'enhavo_user_permission' }
+        arguments:
             - '@security.roles.provider'
 
     Enhavo\Bundle\UserBundle\Form\Type\UserAutoCompleteEntityType:
@@ -40,3 +46,14 @@ services:
             - { name: form.type }
         arguments:
             - '%enhavo_user.model.user.class%'
+
+    Enhavo\Bundle\UserBundle\Form\Type\LoginType:
+        tags:
+            - { name: form.type }
+        arguments:
+            - '@Enhavo\Bundle\UserBundle\Form\EventListener\CredentialsEventSubscriber'
+
+    Enhavo\Bundle\UserBundle\Form\EventListener\CredentialsEventSubscriber:
+        arguments:
+            - '@request_stack'
+            - '@security.csrf.token_manager'

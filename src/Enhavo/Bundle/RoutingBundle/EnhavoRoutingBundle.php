@@ -3,20 +3,18 @@
 namespace Enhavo\Bundle\RoutingBundle;
 
 use Doctrine\ORM\Mapping\Driver\XmlDriver;
-use Enhavo\Bundle\RoutingBundle\DependencyInjection\Compiler\ConditionResolverPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 use Symfony\Component\DependencyInjection\Definition;
 use Doctrine\Bundle\DoctrineBundle\DependencyInjection\Compiler\DoctrineOrmMappingsPass;
-use Doctrine\Common\Persistence\Mapping\Driver\DefaultFileLocator;
+use Doctrine\Persistence\Mapping\Driver\DefaultFileLocator;
 use Enhavo\Bundle\AppBundle\Type\TypeCompilerPass;
 
 class EnhavoRoutingBundle extends Bundle
 {
-    public function build(ContainerBuilder $container)
+    public function build(ContainerBuilder $container): void
     {
         $container->addCompilerPass($this->buildRouteCompilerPass());
-        $container->addCompilerPass(new ConditionResolverPass());
 
         $container->addCompilerPass(
             new TypeCompilerPass('enhavo_routing.auto_generator.route_generator_collector', 'enhavo_route.generator')

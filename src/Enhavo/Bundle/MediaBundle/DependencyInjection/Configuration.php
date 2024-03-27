@@ -4,6 +4,13 @@ namespace Enhavo\Bundle\MediaBundle\DependencyInjection;
 
 use Enhavo\Bundle\MediaBundle\Cache\NoCache;
 use Enhavo\Bundle\MediaBundle\Controller\FileController;
+use Enhavo\Bundle\MediaBundle\Entity\File;
+use Enhavo\Bundle\MediaBundle\Factory\FileFactory;
+use Enhavo\Bundle\MediaBundle\FileNotFound\ExceptionFileNotFoundHandler;
+use Enhavo\Bundle\MediaBundle\Form\Type\FileParametersType;
+use Enhavo\Bundle\MediaBundle\Form\Type\FileType;
+use Enhavo\Bundle\MediaBundle\GarbageCollection\GarbageCollector;
+use Enhavo\Bundle\MediaBundle\Repository\FileRepository;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 
@@ -23,6 +30,20 @@ class Configuration implements ConfigurationInterface
         $rootNode = $treeBuilder->getRootNode();
         $rootNode
             ->children()
+                ->arrayNode('upload_validation')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->variableNode('groups')->defaultValue(['file_upload'])->end()
+                        ->arrayNode('clamav')
+                            ->addDefaultsIfNotSet()
+                            ->children()
+                                ->scalarNode('clamscan_path')->defaultValue('/usr/bin/clamscan')->end()
+                            ->end()
+                        ->end()
+                    ->end()
+                ->end()
+            ->end()
+            ->children()
                 ->arrayNode('formats')
                     ->useAttributeAsKey('name')
                     ->prototype('variable')->end()
@@ -35,7 +56,8 @@ class Configuration implements ConfigurationInterface
                 ->arrayNode('form')
                     ->addDefaultsIfNotSet()
                     ->children()
-                        ->scalarNode('parameters_type')->defaultValue(null)->end()
+                        ->scalarNode('parameters_type')->defaultValue(FileParametersType::class)->end()
+                        ->booleanNode('default_upload_enabled')->defaultValue(true)->end()
                     ->end()
                 ->end()
             ->end()
@@ -66,7 +88,6 @@ class Configuration implements ConfigurationInterface
                     ->end()
                 ->end()
             ->end()
-
             ->children()
                 ->arrayNode('cache_control')
                     ->addDefaultsIfNotSet()
@@ -103,11 +124,11 @@ class Configuration implements ConfigurationInterface
                                 ->arrayNode('classes')
                                     ->addDefaultsIfNotSet()
                                     ->children()
-                                        ->scalarNode('model')->defaultValue('Enhavo\Bundle\MediaBundle\Entity\File')->end()
+                                        ->scalarNode('model')->defaultValue(File::class)->end()
                                         ->scalarNode('controller')->defaultValue(FileController::class)->end()
-                                        ->scalarNode('repository')->defaultValue('Enhavo\Bundle\MediaBundle\Repository\FileRepository')->end()
-                                        ->scalarNode('factory')->defaultValue('Enhavo\Bundle\MediaBundle\Factory\FileFactory')->end()
-                                        ->scalarNode('form')->defaultValue('Enhavo\Bundle\MediaBundle\Factory\FileType')->cannotBeEmpty()->end()
+                                        ->scalarNode('repository')->defaultValue(FileRepository::class)->end()
+                                        ->scalarNode('factory')->defaultValue(FileFactory::class)->end()
+                                        ->scalarNode('form')->defaultValue(FileType::class)->cannotBeEmpty()->end()
                                     ->end()
                                 ->end()
                             ->end()
@@ -126,6 +147,34 @@ class Configuration implements ConfigurationInterface
                                     ->end()
                                 ->end()
                             ->end()
+                        ->end()
+                    ->end()
+                ->end()
+            ->end()
+
+            ->children()
+                ->arrayNode('garbage_collection')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->booleanNode('enabled')->defaultValue(true)->end()
+                        ->booleanNode('enable_listener')->defaultValue(true)->end()
+                        ->scalarNode('enable_delete_unreferenced')->defaultValue(true)->end()
+                        ->scalarNode('enable_delete_marked_garbage')->defaultValue(true)->end()
+                        ->scalarNode('garbage_collector')->defaultValue(GarbageCollector::class)->end()
+                        ->scalarNode('max_items_per_run')->defaultValue(1000)->end()
+                    ->end()
+                ->end()
+            ->end()
+
+            ->children()
+                ->arrayNode('file_not_found')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->scalarNode('handler')->defaultValue(ExceptionFileNotFoundHandler::class)->end()
+                        ->arrayNode('parameters')
+                            ->defaultValue([])
+                            ->useAttributeAsKey('name')
+                            ->prototype('variable')->end()
                         ->end()
                     ->end()
                 ->end()

@@ -12,7 +12,7 @@
     "authors": [
         {
             "name": "Benjamin Lutze",
-            "email": "blutze@xq-web.de"
+            "email": "bl@weareindeed.com"
         }
     ],
     "require": {
@@ -33,12 +33,12 @@
     },
     "autoload": {
         "psr-4": {
-            "Enhavo\\Component\\CleverReach\\": "src/"
+            "Enhavo\\Component\\CleverReach\\": ""
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Enhavo\\Component\\CleverReach\\Tests\\": "tests/"
+            "Enhavo\\Component\\CleverReach\\Tests\\": "Tests/"
         }
     }
 }

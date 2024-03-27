@@ -1,0 +1,91 @@
+Enhavo\Bundle\BlockBundle\Entity\AbstractBlock:
+    attributes:
+        id:
+            groups: ['endpoint.block']
+
+Enhavo\Bundle\BlockBundle\Model\Block\BlockquoteBlock:
+    attributes:
+        text:
+            groups: ['endpoint.block']
+        author:
+            groups: ['endpoint.block']
+
+Enhavo\Bundle\BlockBundle\Model\Block\GalleryBlock:
+    attributes:
+        title:
+            groups: ['endpoint.block']
+        text:
+            groups: ['endpoint.block']
+        files:
+            groups: ['endpoint.block']
+
+Enhavo\Bundle\BlockBundle\Model\Block\PictureBlock:
+    attributes:
+        title:
+            groups: ['endpoint.block']
+        caption:
+            groups: ['endpoint.block']
+        file:
+            groups: ['endpoint.block']
+
+Enhavo\Bundle\BlockBundle\Model\Block\Template:
+    attributes:
+
+Enhavo\Bundle\BlockBundle\Model\Block\TextBlock:
+    attributes:
+        title:
+            groups: ['endpoint.block']
+        text:
+            groups: ['endpoint.block']
+
+Enhavo\Bundle\BlockBundle\Model\Block\TextPictureBlock:
+    attributes:
+        text:
+            groups: ['endpoint.block']
+        title:
+            groups: ['endpoint.block']
+        textLeft:
+            groups: ['endpoint.block']
+        file:
+            groups: ['endpoint.block']
+        float:
+            groups: ['endpoint.block']
+        caption:
+            groups: ['endpoint.block']
+        layout:
+            groups: ['endpoint.block']
+
+Enhavo\Bundle\BlockBundle\Model\Block\VideoBlock:
+    attributes:
+        title:
+            groups: [ 'endpoint.block' ]
+        url:
+            groups: [ 'endpoint.block' ]
+
+Enhavo\Bundle\BlockBundle\Model\Column\Column:
+    attributes:
+        width:
+            groups: ['endpoint.block']
+        style:
+            groups: ['endpoint.block']
+
+Enhavo\Bundle\BlockBundle\Model\Column\OneColumnBlock:
+    attributes:
+        column:
+            groups: ['endpoint.block']
+
+Enhavo\Bundle\BlockBundle\Model\Column\TwoColumnBlock:
+    attributes:
+        columnOne:
+            groups: ['endpoint.block']
+        columnTwo:
+            groups: ['endpoint.block']
+
+Enhavo\Bundle\BlockBundle\Model\Column\ThreeColumnBlock:
+    attributes:
+        columnOne:
+            groups: ['endpoint.block']
+        columnTwo:
+            groups: ['endpoint.block']
+        columnThree:
+            groups: ['endpoint.block']

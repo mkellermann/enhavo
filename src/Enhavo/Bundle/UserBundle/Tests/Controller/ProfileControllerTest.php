@@ -7,19 +7,19 @@
 namespace Controller;
 
 
-use Enhavo\Bundle\AppBundle\Template\TemplateManager;
+use Enhavo\Bundle\AppBundle\Template\TemplateResolver;
 use Enhavo\Bundle\FormBundle\Error\FormErrorResolver;
 use Enhavo\Bundle\UserBundle\Controller\ProfileController;
 use Enhavo\Bundle\UserBundle\Model\User;
 use Enhavo\Bundle\UserBundle\User\UserManager;
 use PHPUnit\Framework\MockObject\MockObject;
-use PHPUnit\Framework\TestCase;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\ParameterBag;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class ProfileControllerTest //extends TestCase
@@ -28,7 +28,7 @@ class ProfileControllerTest //extends TestCase
     {
         return new ProfileControllerMock(
             $dependencies->userManager,
-            $dependencies->templateManager,
+            $dependencies->templateResolver,
             $dependencies->translator,
             $dependencies->errorResolver
         );
@@ -41,8 +41,8 @@ class ProfileControllerTest //extends TestCase
         $dependencies->userManager->method('getConfigKey')->willReturnCallback(function ($request) {
             return $request->attributes->get('_config');
         });
-        $dependencies->templateManager = $this->getMockBuilder(TemplateManager::class)->disableOriginalConstructor()->getMock();
-        $dependencies->templateManager->method('getTemplate')->willReturnCallback(function ($template) {
+        $dependencies->templateResolver = $this->getMockBuilder(TemplateResolver::class)->disableOriginalConstructor()->getMock();
+        $dependencies->templateResolver->method('resolve')->willReturnCallback(function ($template) {
             return $template .'.managed';
         });
 
@@ -74,7 +74,7 @@ class ProfileControllerTest //extends TestCase
 
             return $dependencies->form;
         });
-        $dependencies->userManager->expects($this->exactly(3))->method('getTemplate')->willReturn('profile.html.twig');
+        $dependencies->userManager->expects($this->exactly(3))->method('resolve')->willReturn('profile.html.twig');
         $dependencies->userManager->expects($this->exactly(1))->method('update');
 
         $controller = $this->createInstance($dependencies);
@@ -110,7 +110,7 @@ class ProfileControllerTest //extends TestCase
 
             return $dependencies->form;
         });
-        $dependencies->userManager->expects($this->exactly(1))->method('getTemplate')->willReturn('profile.html.twig');
+        $dependencies->userManager->expects($this->exactly(1))->method('resolve')->willReturn('profile.html.twig');
         $dependencies->userManager->expects($this->exactly(1))->method('update');
 
         $controller = $this->createInstance($dependencies);
@@ -145,8 +145,8 @@ class ProfileControllerTestDependencies
     /** @var UserManager|MockObject */
     public $userManager;
 
-    /** @var TemplateManager|MockObject */
-    public $templateManager;
+    /** @var TemplateResolver|MockObject */
+    public $templateResolver;
 
     /** @var TranslatorInterface|MockObject */
     public $translator;
@@ -165,7 +165,7 @@ class ProfileControllerMock extends ProfileController
 {
     public $isGranted = false;
 
-    protected function getUser()
+    protected function getUser(): ?UserInterface
     {
         return new User();
     }
@@ -191,7 +191,7 @@ class ProfileControllerMock extends ProfileController
         return $this->flashMessages;
     }
 
-    protected function addFlash(string $type, $message)
+    protected function addFlash(string $type, $message): void
     {
         $this->flashMessages[$type] = $message;
     }

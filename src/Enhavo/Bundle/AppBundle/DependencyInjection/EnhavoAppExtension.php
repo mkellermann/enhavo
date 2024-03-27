@@ -42,16 +42,22 @@ class EnhavoAppExtension extends Extension implements PrependExtensionInterface
         $container->setParameter('enhavo_app.locale_resolver', $config['locale_resolver']);
         $container->setParameter('enhavo_app.toolbar_widget.primary', $config['toolbar_widget']['primary']);
         $container->setParameter('enhavo_app.toolbar_widget.secondary', $config['toolbar_widget']['secondary']);
+        $container->setParameter('enhavo_app.vue.route_providers', $config['vue']['route_providers'] ?? []);
+        $container->setParameter('enhavo_app.endpoint.template_url_prefix', $config['endpoint']['template_url_prefix'] ?? null);
+        $container->setParameter('enhavo_app.areas', $config['area'] ?? []);
 
         $loader = new Loader\YamlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
 
+        $loader->load('services/area.yaml');
         $loader->load('services/services.yaml');
         $loader->load('services/controller.yaml');
+        $loader->load('services/endpoint.yaml');
         $loader->load('services/twig.yaml');
         $loader->load('services/init.yaml');
         $loader->load('services/locale.yaml');
         $loader->load('services/command.yaml');
-        $loader->load('services/viewer.yaml');
+        $loader->load('services/grid.yaml');
+        $loader->load('services/view.yaml');
         $loader->load('services/filter.yaml');
         $loader->load('services/column.yaml');
         $loader->load('services/action.yaml');

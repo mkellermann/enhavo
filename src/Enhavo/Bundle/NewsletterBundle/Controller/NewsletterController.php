@@ -4,7 +4,6 @@ namespace Enhavo\Bundle\NewsletterBundle\Controller;
 
 use Enhavo\Bundle\AppBundle\Controller\RequestConfiguration;
 use Enhavo\Bundle\AppBundle\Controller\ResourceController;
-use Enhavo\Bundle\AppBundle\Template\TemplateTrait;
 use Enhavo\Bundle\NewsletterBundle\Entity\Newsletter;
 use Enhavo\Bundle\NewsletterBundle\Entity\Receiver;
 use Enhavo\Bundle\NewsletterBundle\Form\Type\NewsletterEmailType;
@@ -18,8 +17,6 @@ use Symfony\Component\HttpFoundation\Response;
 
 class NewsletterController extends ResourceController
 {
-    use TemplateTrait;
-
     public function showAction(Request $request): Response
     {
         $slug = $request->get('slug');
@@ -139,9 +136,7 @@ class NewsletterController extends ResourceController
             'request_configuration' => $configuration,
             'metadata' => $this->metadata,
             'resource' => $newsletter,
-            'template' => 'admin/resource/newsletter/stats.html.twig',
-            'javascripts' => ['enhavo/newsletter/stats'],
-            'stylesheets' => ['enhavo/newsletter/stats']
+            'template' => 'admin/resource/newsletter/stats.html.twig'
         ]);
 
         return $this->viewHandler->handle($configuration, $view);

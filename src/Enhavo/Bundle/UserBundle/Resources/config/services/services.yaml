@@ -3,68 +3,67 @@ services:
         arguments:
             - '@doctrine.orm.entity_manager'
             - '@Enhavo\Bundle\AppBundle\Mailer\MailerManager'
-            - '@enhavo_user.repository.user'
-            - '@Enhavo\Bundle\UserBundle\Mapper\UserMapper'
+            - '@Enhavo\Bundle\UserBundle\UserIdentifier\UserIdentifierProviderResolver'
             - '@enhavo_app.util.secure_url_token_generator'
             - '@translator'
-            - '@security.encoder_factory.generic'
+            - '@security.user_password_hasher'
             - '@router'
             - '@event_dispatcher'
             - '@security.token_storage'
             - '@request_stack'
             - '@security.authentication.session_strategy.main'
             - '@security.user_checker.main'
-            - ~
             - '%enhavo_user.default_firewall%'
 
     Enhavo\Bundle\UserBundle\EventListener\SaveUserSubscriber:
         arguments:
-            - '@enhavo_user.user.manager'
+            - '@Enhavo\Bundle\UserBundle\User\UserManager'
         tags:
             - { name: kernel.event_subscriber }
 
+    Enhavo\Bundle\UserBundle\Configuration\RequestConfigKeyProvider:
+        arguments:
+            - '@request_stack'
+
+    Enhavo\Bundle\UserBundle\Configuration\FirewallConfigKeyProvider:
+        arguments:
+            - '@security.firewall.map'
+            - '@request_stack'
+            - '%enhavo_user.config%'
+
+    Enhavo\Bundle\UserBundle\Configuration\ChainConfigKeyProvider:
+        calls:
+            - [addConfigKeyProvider, ['@Enhavo\Bundle\UserBundle\Configuration\RequestConfigKeyProvider', 5]]
+            - [addConfigKeyProvider, ['@Enhavo\Bundle\UserBundle\Configuration\FirewallConfigKeyProvider' , 20]]
+
     Enhavo\Bundle\UserBundle\Security\EntryPoint\FormAuthenticationEntryPoint:
-        decoration_priority: 1
-        decoration_on_invalid: exception
-        decoration_inner_name: security.authentication.form_entry_point.admin.inner
-        decorates: security.authentication.form_entry_point.admin
-        arguments: ['@security.authentication.form_entry_point.admin.inner']
+        arguments:
+            - '@router'
+            - '@Enhavo\Bundle\UserBundle\Configuration\ConfigurationProvider'
 
     Enhavo\Bundle\UserBundle\Security\Authentication\Voter\GroupRoleVoter:
         public: false
         tags:
             - { name: security.voter }
 
-    Enhavo\Bundle\UserBundle\Widget\LoginWidgetType:
-        public: true
-        arguments:
-            - '@request_stack'
-            - '@security.csrf.token_manager'
-        calls:
-            - [setContainer, ['@service_container']]
-        tags:
-            - { name: enhavo.widget, alias: login }
-
     Enhavo\Bundle\UserBundle\Security\Authentication\FormLoginAuthenticator:
         arguments:
-            - '@enhavo_user.user.manager'
+            - '@enhavo_user.repository.user'
             - '@Enhavo\Bundle\UserBundle\Configuration\ConfigurationProvider'
             - '@router'
-            - '@security.csrf.token_manager'
-            - '@security.user_password_encoder.generic'
-            - '@Enhavo\Bundle\UserBundle\Mapper\UserMapper'
             - '@event_dispatcher'
+            - '@form.factory'
+            - '@Enhavo\Component\Type\FactoryInterface[Endpoint]'
             - '%enhavo_user.model.user.class%'
 
-    Enhavo\Bundle\UserBundle\Security\UserChecker: ~
-
-    Enhavo\Bundle\UserBundle\Mapper\UserMapper:
+    Enhavo\Bundle\UserBundle\Security\UserChecker:
         arguments:
-            - '%enhavo_user.mapper%'
+            - '@event_dispatcher'
 
     Enhavo\Bundle\UserBundle\Configuration\ConfigurationProvider:
         arguments:
             - '%enhavo_user.config%'
+            - '@Enhavo\Bundle\UserBundle\Configuration\ChainConfigKeyProvider'
 
     Enhavo\Bundle\UserBundle\Validator\Constraints\UserExistsValidator:
         arguments:
@@ -77,6 +76,13 @@ services:
             - '@enhavo_user.repository.user'
         tags:
             - { name: validator.constraint_validator }
+
+    Enhavo\Bundle\UserBundle\Validator\Constraints\CredentialsValidValidator:
+        arguments:
+            - '@Enhavo\Bundle\UserBundle\Security\Authentication\AuthenticationError'
+        tags:
+            - { name: validator.constraint_validator }
+
 
     Enhavo\Bundle\UserBundle\Validator\Constraints\UserEmailValidator:
         arguments:
@@ -91,3 +97,59 @@ services:
             - '@router'
         tags:
             - { name: twig.extension }
+
+    Enhavo\Bundle\UserBundle\Component\LoginComponent:
+        arguments:
+            - '@request_stack'
+            - '@form.factory'
+            - '@Enhavo\Bundle\UserBundle\Configuration\ConfigurationProvider'
+            - '@Enhavo\Bundle\UserBundle\Security\Authentication\AuthenticationError'
+        tags:
+            - { name: twig.component, key: user_login,  template: 'theme/component/user/login.html.twig' }
+
+    Enhavo\Bundle\UserBundle\Security\Authentication\AuthenticationError:
+        arguments:
+            - '@security.authentication_utils'
+            - '@translator'
+
+    Enhavo\Bundle\UserBundle\Security\Authentication\ErrorMessage\BadCredentialsError:
+        arguments:
+            - '@translator'
+        tags:
+            - { name: 'enhavo_user.error_message' }
+
+    Enhavo\Bundle\UserBundle\Security\Authentication\ErrorMessage\NotEnabledError:
+        arguments:
+            - '@translator'
+        tags:
+            - { name: 'enhavo_user.error_message' }
+
+    Enhavo\Bundle\UserBundle\Security\Authentication\ErrorMessage\PasswordExpiredError:
+        arguments:
+            - '@translator'
+        tags:
+            - { name: 'enhavo_user.error_message' }
+
+    Enhavo\Bundle\UserBundle\Security\Authentication\ErrorMessage\TooManyLoginAttemptsError:
+        arguments:
+            - '@translator'
+        tags:
+            - { name: 'enhavo_user.error_message' }
+
+    Enhavo\Bundle\UserBundle\Security\Authentication\ErrorMessage\VerificationRequiredError:
+        arguments:
+            - '@translator'
+        tags:
+            - { name: 'enhavo_user.error_message' }
+
+    Enhavo\Bundle\UserBundle\UserIdentifier\UserIdentifierProviderResolver:
+        arguments:
+            - '%enhavo_user.user_identifiers%'
+        calls:
+            - [setContainer, ['@service_container']]
+
+    Enhavo\Bundle\UserBundle\UserIdentifier\EmailUserIdentifierProvider:
+        public: true
+
+    Enhavo\Bundle\UserBundle\UserIdentifier\UsernamelUserIdentifieProvider:
+        public: true

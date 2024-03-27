@@ -28,3 +28,24 @@ services:
             - [setContainer, ['@service_container']]
         tags:
             - { name: enhavo.column, alias: currency }
+
+    Enhavo\Bundle\FormBundle\Form\Extension\ListVueTypeExtension:
+        arguments:
+            - '@Enhavo\Bundle\VueFormBundle\Form\VueForm'
+        tags:
+            - 'form.type_extension'
+
+    Enhavo\Bundle\FormBundle\Form\Extension\PolyCollectionVueTypeExtension:
+        arguments:
+            - '@Enhavo\Bundle\VueFormBundle\Form\VueForm'
+            - '@Enhavo\Bundle\FormBundle\Prototype\PrototypeManager'
+        tags:
+            - 'form.type_extension'
+
+    Enhavo\Bundle\FormBundle\Form\Extension\PositionVueTypeExtension:
+        tags:
+            - 'form.type_extension'
+
+    Enhavo\Bundle\FormBundle\Form\Extension\WysiwygVueTypeExtension:
+        tags:
+            - 'form.type_extension'

@@ -8,10 +8,10 @@
 
 namespace Enhavo\Bundle\MediaBundle\Media;
 
-use Doctrine\ORM\EntityManagerInterface;
-
+use Enhavo\Bundle\AppBundle\Resource\ResourceManager;
 use Enhavo\Bundle\DoctrineExtensionBundle\Util\AssociationFinder;
 use Enhavo\Bundle\MediaBundle\Entity\Format;
+use Enhavo\Bundle\MediaBundle\FileNotFound\FileNotFoundHandlerInterface;
 use Enhavo\Bundle\MediaBundle\Model\FileInterface;
 use Enhavo\Bundle\MediaBundle\Model\FormatInterface;
 use Enhavo\Bundle\MediaBundle\Provider\ProviderInterface;
@@ -20,60 +20,16 @@ use Enhavo\Bundle\MediaBundle\Storage\StorageInterface;
 
 class MediaManager
 {
-    /**
-     * @var StorageInterface
-     */
-    private $storage;
-
-    /**
-     * @var FormatManager
-     */
-    private $formatManager;
-
-    /**
-     * @var FileRepository
-     */
-    private $fileRepository;
-
-    /**
-     * @var EntityManagerInterface
-     */
-    private $em;
-
-    /**
-     * @var ProviderInterface
-     */
-    private $provider;
-
-    /**
-     * @var AssociationFinder
-     */
-    private $associationFinder;
-
-    /**
-     * MediaManager constructor.
-     *
-     * @param FormatManager $formatManager
-     * @param StorageInterface $storage
-     * @param FileRepository $fileRepository
-     * @param EntityManagerInterface $em
-     * @param ProviderInterface $provider
-     * @param AssociationFinder $associationFinder
-     */
     public function __construct(
-        FormatManager $formatManager,
-        StorageInterface $storage,
-        FileRepository $fileRepository,
-        EntityManagerInterface $em,
-        ProviderInterface $provider,
-        AssociationFinder $associationFinder
+        private readonly StorageInterface $storage,
+        private readonly FormatManager $formatManager,
+        private readonly FileRepository $fileRepository,
+        private readonly ProviderInterface $provider,
+        private readonly AssociationFinder $associationFinder,
+        private readonly ResourceManager $resourceManager,
+        private readonly FileNotFoundHandlerInterface $fileNotFoundHandler,
+        private array $fileNotFoundHandlerParameter,
     ) {
-        $this->formatManager = $formatManager;
-        $this->storage = $storage;
-        $this->fileRepository = $fileRepository;
-        $this->em = $em;
-        $this->provider = $provider;
-        $this->associationFinder = $associationFinder;
     }
 
     /**
@@ -130,8 +86,7 @@ class MediaManager
     {
         $this->storage->deleteFile($file);
         $this->formatManager->deleteFormats($file);
-        $this->em->remove($file);
-        $this->em->flush();
+        $this->resourceManager->delete($file);
     }
 
     /**
@@ -141,9 +96,7 @@ class MediaManager
      */
     public function saveFile(FileInterface $file)
     {
-        $this->em->persist($file);
-        $this->em->flush();
-
+        $this->resourceManager->save($file);
         $this->storage->saveFile($file);
     }
 
@@ -182,6 +135,24 @@ class MediaManager
     }
 
     /**
+     * @param FileInterface|FormatInterface $file
+     * @return void
+     */
+    public function handleFileNotFound($file): void
+    {
+        if ($file instanceof FileInterface) {
+            $this->fileNotFoundHandler->handleFileNotFound($file, $this->fileNotFoundHandlerParameter);
+        } else {
+            $formatName = $file->getName();
+            $originalFile = $file->getFile();
+            if (!file_exists($originalFile->getContent()->getFilePath()))  {
+                $this->fileNotFoundHandler->handleFileNotFound($originalFile, $this->fileNotFoundHandlerParameter);
+            }
+            $this->formatManager->applyFormat($originalFile, $formatName);
+        }
+    }
+
+    /**
      * Finds entities referencing the file.
      *
      * @param FileInterface $file File to find references to
@@ -190,5 +161,40 @@ class MediaManager
     public function findReferencesTo(FileInterface $file)
     {
         return $this->associationFinder->findAssociationsTo($file, FileInterface::class, [Format::class]);
+    }
+
+    public function getMaxUploadSize()
+    {
+        static $maxSize = -1;
+
+        if ($maxSize < 0) {
+            // Start with postMaxSize.
+            $postMaxSize = $this->parseSize(ini_get('post_max_size'));
+            if ($postMaxSize > 0) {
+                $maxSize = $postMaxSize;
+            }
+
+            // If upload_max_size is less, then reduce. Except if upload_max_size is
+            // zero, which indicates no limit.
+            $uploadMax = $this->parseSize(ini_get('upload_max_filesize'));
+            if ($uploadMax > 0 && $uploadMax < $maxSize) {
+                $maxSize = $uploadMax;
+            }
+        }
+
+        return $maxSize;
+    }
+
+    private function parseSize($size)
+    {
+        $unit = preg_replace('/[^bkmgtpezy]/i', '', $size); // Remove the non-unit characters from the size.
+        $size = preg_replace('/[^0-9\.]/', '', $size); // Remove the non-numeric characters from the size.
+        if ($unit) {
+            // Find the position of the unit in the ordered string which is the power of magnitude to multiply a kilobyte by.
+            return round($size * pow(1024, stripos('bkmgtpezy', $unit[0])));
+        }
+        else {
+            return round($size);
+        }
     }
 }

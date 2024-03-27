@@ -9,8 +9,8 @@
 namespace Enhavo\Bundle\DoctrineExtensionBundle\Tests;
 
 use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\ORMSetup;
 use Doctrine\ORM\Tools\SchemaTool;
-use Doctrine\ORM\Tools\Setup;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Finder\Finder;
 
@@ -25,13 +25,13 @@ abstract class DoctrineTest extends TestCase
     /** @var string */
     protected $proxyDir;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->bootstrap();
         $this->updateSchema();
     }
 
-    protected function tearDown()
+    protected function tearDown(): void
     {
         $this->em->close();
         unset($this->em);
@@ -49,7 +49,7 @@ abstract class DoctrineTest extends TestCase
             }
         }
 
-        $config = Setup::createAnnotationMetadataConfiguration(array($this->entityDir), true, $this->proxyDir ?? $this->proxyDir);
+        $config = ORMSetup::createAttributeMetadataConfiguration(array($this->entityDir), true, $this->proxyDir ?? $this->proxyDir);
         $conn = ['url' => 'sqlite:///:memory:'];
         $this->em = EntityManager::create($conn, $config);
     }

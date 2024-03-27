@@ -1,0 +1,84 @@
+services:
+    Enhavo\Bundle\MediaLibraryBundle\Media\MediaLibraryManager:
+        public: true
+        arguments:
+            - '%enhavo_media_library.content_type%'
+            - '@enhavo_media.repository.file'
+            - '@enhavo_taxonomy.repository.term'
+            - '@translator'
+
+    Enhavo\Bundle\MediaLibraryBundle\EventListener\ContentTypeSubscriber:
+        arguments:
+            - '@Enhavo\Bundle\MediaLibraryBundle\Media\MediaLibraryManager'
+        tags:
+            - { name: kernel.event_subscriber }
+
+    Enhavo\Bundle\MediaLibraryBundle\EventListener\FileUploadSubscriber:
+        arguments:
+            - '@doctrine.orm.entity_manager'
+        tags:
+            - { name: kernel.event_subscriber }
+
+    Enhavo\Bundle\MediaLibraryBundle\GarbageCollection\Voter\LibraryGarbageCollectionVoter:
+        tags:
+            - { name: enhavo_media.garbage_collection_voter, priority: 20 }
+
+    Enhavo\Bundle\MediaLibraryBundle\Form\Extension\MediaExtension:
+        tags:
+            - { name: form.type_extension, extended_type: Enhavo\Bundle\MediaBundle\Form\Type\MediaType }
+
+    Enhavo\Bundle\MediaLibraryBundle\Media\MediaLibraryExtension:
+        public: true
+        calls:
+            - [setContainer, ['@service_container']]
+            - [setTemplateResolver, ['@Enhavo\Bundle\AppBundle\Template\TemplateResolverInterface']]
+        tags:
+            - { name: enhavo.media_extension , alias: media_library }
+
+    Enhavo\Bundle\MediaLibraryBundle\View\Type\MediaLibraryViewType:
+        arguments:
+            - '@enhavo_app.action_manager'
+            - '@Enhavo\Bundle\AppBundle\View\ViewUtil'
+            - '@translator'
+        tags:
+            - { name: enhavo_app.view }
+
+    Enhavo\Bundle\MediaLibraryBundle\View\Type\FilesViewType:
+        arguments:
+            - '@Enhavo\Bundle\MediaLibraryBundle\Media\MediaLibraryManager'
+            - '@sylius.resource_controller.resources_collection_provider'
+            - '@enhavo_media.repository.file'
+            - '@enhavo_media.media.public_url_generator'
+            - '@translator'
+        tags:
+            - { name: enhavo_app.view }
+
+    Enhavo\Bundle\MediaLibraryBundle\Menu\MediaLibraryRootMenuType:
+        parent: Enhavo\Bundle\AppBundle\Menu\Menu\ListMenu
+        tags:
+            - { name: enhavo.menu, alias: media_library }
+
+    Enhavo\Bundle\MediaLibraryBundle\Menu\MediaLibraryMenu:
+        parent: Enhavo\Bundle\AppBundle\Menu\Menu\BaseMenu
+        tags:
+            - { name: enhavo.menu, alias: media_library_library }
+
+    Enhavo\Bundle\MediaLibraryBundle\Menu\TagMenuType:
+        parent: Enhavo\Bundle\AppBundle\Menu\Menu\BaseMenu
+        tags:
+            - { name: enhavo.menu, alias: media_library_tag }
+
+    Enhavo\Bundle\MediaLibraryBundle\Form\Type\FileType:
+        arguments:
+            - '@Enhavo\Bundle\MediaLibraryBundle\Media\MediaLibraryManager'
+            - '@enhavo_media.media.public_url_generator'
+            - '%enhavo_media.form%'
+        tags:
+            - { name: form.type }
+
+    enhavo_media_library.factory.file:
+        class: Enhavo\Bundle\MediaLibraryBundle\Factory\FileFactory
+        public: true
+        arguments:
+            - '%enhavo_media_library.model.file.class%'
+            - '@enhavo_media.provider'

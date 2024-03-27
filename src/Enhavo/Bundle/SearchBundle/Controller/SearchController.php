@@ -2,35 +2,41 @@
 
 namespace Enhavo\Bundle\SearchBundle\Controller;
 
-use Enhavo\Bundle\AppBundle\Template\TemplateManager;
-use Enhavo\Bundle\SearchBundle\Engine\EngineInterface;
+use Enhavo\Bundle\AppBundle\Template\TemplateResolver;
+use Enhavo\Bundle\SearchBundle\Engine\SearchEngineInterface;
 use Enhavo\Bundle\SearchBundle\Engine\Filter\Filter;
 use Enhavo\Bundle\SearchBundle\Result\ResultConverter;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class SearchController extends AbstractController
 {
     /** @var ResultConverter */
     private $resultConverter;
 
-    /** @var EngineInterface */
+    /** @var SearchEngineInterface */
     private $searchEngine;
 
-    /** @var TemplateManager */
-    private $templateManager;
+    /** @var TemplateResolver */
+    private $templateResolver;
+
+    /** @var ExpressionLanguage */
+    private $expressionLanguage;
 
     /**
      * @param ResultConverter $resultConverter
-     * @param EngineInterface $searchEngine
-     * @param TemplateManager $templateManager
+     * @param SearchEngineInterface $searchEngine
+     * @param TemplateResolver $templateResolver
      */
-    public function __construct(ResultConverter $resultConverter, EngineInterface $searchEngine, TemplateManager $templateManager)
+    public function __construct(ResultConverter $resultConverter, SearchEngineInterface $searchEngine, TemplateResolver $templateResolver, ExpressionLanguage $expressionLanguage)
     {
         $this->resultConverter = $resultConverter;
         $this->searchEngine = $searchEngine;
-        $this->templateManager = $templateManager;
+        $this->templateResolver = $templateResolver;
+        $this->expressionLanguage = $expressionLanguage;
     }
 
     /**
@@ -49,22 +55,23 @@ class SearchController extends AbstractController
         $filter = new Filter();
         $filter->setTerm($term);
         $filter->setLimit(100);
+        $this->addFilters($filter, $configuration);
 
         $pagination = $this->searchEngine->searchPaginated($filter);
 
-        $pagination->setCurrentPage($page);
         $pagination->setMaxPerPage($configuration->getMaxPerPage());
+        $pagination->setCurrentPage($page);
 
         $results = $this->resultConverter->convert($pagination, $term);
 
-        return $this->render($this->templateManager->getTemplate($configuration->getTemplate()), [
+        return $this->render($this->templateResolver->resolve($configuration->getTemplate()), [
             'results' => $results,
             'pagination' => $pagination,
             'term' => $term
         ]);
     }
 
-    private function createConfiguration(Request $request): SearchConfiguration
+    protected function createConfiguration(Request $request): SearchConfiguration
     {
         $configuration = new SearchConfiguration();
 
@@ -85,6 +92,32 @@ class SearchController extends AbstractController
             $configuration->setMaxPerPage($config['max_per_page']);
         }
 
+        if (isset($config['filters'])) {
+            $configuration->setFilters($config['filters']);
+        }
+
         return $configuration;
+    }
+
+    protected function addFilters(Filter $filter, SearchConfiguration $configuration)
+    {
+        foreach ($configuration->getFilters() as $filterConfiguration) {
+            $resolver = new OptionsResolver();
+            $resolver->setDefaults([
+                'arguments' => []
+            ]);
+            $resolver->setRequired(['key', 'class']);
+            $options = $resolver->resolve($filterConfiguration);
+
+            foreach($options['arguments'] as &$argument) {
+                if (str_starts_with($argument, 'expr:')) {
+                    $argument = $this->expressionLanguage->evaluate(substr($argument, 5));
+                }
+            }
+
+            $reflection = new \ReflectionClass($options['class']);
+            $query = $reflection->newInstanceArgs($options['arguments']);
+            $filter->addQuery($options['key'], $query);
+        }
     }
 }

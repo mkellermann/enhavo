@@ -1,176 +1,146 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: gseidel
- * Date: 29.10.18
- * Time: 21:34
- */
 
 namespace Enhavo\Bundle\ShopBundle\Entity;
 
-use Sylius\Component\Promotion\Model\PromotionCouponInterface;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
+use Enhavo\Bundle\ShopBundle\Model\OrderInterface;
+use Enhavo\Bundle\ShopBundle\Model\VoucherInterface;
+use Enhavo\Bundle\ShopBundle\Model\VoucherRedemptionInterface;
 use Sylius\Component\Resource\Model\ResourceInterface;
 
-class Voucher implements ResourceInterface
+class Voucher implements ResourceInterface, VoucherInterface
 {
-    /**
-     * @var integer
-     */
-    private $id;
+    private ?int $id = null;
+    private ?string $code = null;
+    private ?int $amount = null;
+    private bool $enabled = true;
+    private bool $partialRedeemable = true;
+    private ?\DateTime $createdAt = null;
+    private ?\DateTime $expiredAt = null;
+    /** @var Collection */
+    private Collection $redemptions;
 
-    /**
-     * @var string
-     */
-    private $code;
+    public function __construct()
+    {
+        $this->redemptions = new ArrayCollection();
+    }
 
-    /**
-     * @var integer
-     */
-    private $amount;
-
-    /**
-     * @var integer
-     */
-    private $redeemAmount = 0;
-
-    /**
-     * @var \DateTime
-     */
-    private $redeemedAt;
-
-    /**
-     * @var \DateTime
-     */
-    private $createdAt;
-
-    /**
-     * @var Coupon
-     */
-    private $coupon;
-
-    /**
-     * @return int
-     */
     public function getId()
     {
         return $this->id;
     }
 
-    /**
-     * @param int $id
-     */
-    public function setId($id)
+    public function getOrders(): array
     {
-        $this->id = $id;
+        $orders = [];
+        foreach ($this->redemptions as $redemption) {
+            $orders[] = $redemption->getOrder();
+        }
+        return $orders;
     }
 
-    /**
-     * @return string
-     */
     public function getCode()
     {
         return $this->code;
     }
 
-    /**
-     * @param string $code
-     */
     public function setCode($code)
     {
         $this->code = $code;
-        $this->coupon->setCode($code);
     }
 
-    /**
-     * @return int
-     */
-    public function getAmount()
+    public function getAmount(): int
     {
-        return $this->amount;
+        return intval($this->amount);
     }
 
-    /**
-     * @param int $amount
-     */
     public function setAmount($amount)
     {
         $this->amount = $amount;
     }
 
-    /**
-     * @return \DateTime
-     */
     public function getCreatedAt()
     {
         return $this->createdAt;
     }
 
-    /**
-     * @param \DateTime $createdAt
-     */
     public function setCreatedAt($createdAt)
     {
         $this->createdAt = $createdAt;
     }
 
-    /**
-     * @return \DateTime
-     */
-    public function getRedeemedAt()
+    public function getAvailableAmount(): int
     {
-        return $this->redeemedAt;
+        return $this->getAmount() - $this->getRedeemedAmount();
     }
 
-    /**
-     * @param \DateTime $redeemedAt
-     */
-    public function setRedeemedAt($redeemedAt)
+    public function getRedeemedAmount(): int
     {
-        $this->redeemedAt = $redeemedAt;
-    }
-
-    /**
-     * @return Coupon
-     */
-    public function getCoupon()
-    {
-        return $this->coupon;
-    }
-
-    /**
-     * @param Coupon $coupon
-     */
-    public function setCoupon($coupon)
-    {
-        $this->coupon = $coupon;
-    }
-
-    /**
-     * @return int
-     */
-    public function getRedeemAmount()
-    {
-        return $this->redeemAmount;
-    }
-
-    /**
-     * @param int $redeemAmount
-     */
-    public function setRedeemAmount($redeemAmount)
-    {
-        $this->redeemAmount = $redeemAmount;
-    }
-
-    public function getAvailableAmount()
-    {
-        return intval($this->amount) - intval($this->redeemAmount);
-    }
-
-    public function addRedeemAmount($amount)
-    {
-        $this->redeemAmount = intval($this->redeemAmount) + intval($amount);
-        if($this->getAvailableAmount() <= 0) {
-            $this->getCoupon()->setExpiresAt(new \DateTime());
+        $value = 0;
+        foreach ($this->redemptions as $redemption) {
+            $value += $redemption->getAmount();
         }
+        return $value;
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
+    }
+
+    public function setEnabled(bool $enabled): void
+    {
+        $this->enabled = $enabled;
+    }
+
+    public function isPartialRedeemable(): bool
+    {
+        return $this->partialRedeemable;
+    }
+
+    public function setPartialRedeemable(bool $partialRedeemable): void
+    {
+        $this->partialRedeemable = $partialRedeemable;
+    }
+
+    public function getExpiredAt(): ?\DateTime
+    {
+        return $this->expiredAt;
+    }
+
+    public function setExpiredAt(?\DateTime $expiredAt): void
+    {
+        $this->expiredAt = $expiredAt;
+    }
+
+    /**
+     * @return VoucherRedemptionInterface[]|Collection
+     */
+    public function getRedemptions(): Collection
+    {
+        return $this->redemptions;
+    }
+
+    public function getRedemption(OrderInterface $order): ?VoucherRedemptionInterface
+    {
+        foreach ($this->getRedemptions() as $redemption) {
+            if ($redemption->getOrder() === $order) {
+                return $redemption;
+            }
+        }
+        return null;
+    }
+
+    public function addRedemption($redemption)
+    {
+        $this->redemptions->add($redemption);
+        $redemption->setVoucher($this);
+    }
+
+    public function removeRedemption($redemption)
+    {
+        $this->redemptions->removeElement($redemption);
+        $redemption->setVoucher(null);
     }
 }

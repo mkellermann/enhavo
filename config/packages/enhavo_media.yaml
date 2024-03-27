@@ -1,4 +1,8 @@
 enhavo_media:
+    filter:
+        video_image:
+            ffmpeg_path: /usr/bin/ffmpeg
+            ffprobe_path: /usr/bin/ffprobe
     formats:
         articleThumbnail:
             type: image
@@ -12,3 +16,8 @@ enhavo_media:
             type: image
             width: 1300
             height: 600
+
+when@dev:
+    enhavo_media:
+        file_not_found:
+            handler: Enhavo\Bundle\MediaBundle\FileNotFound\CreateDummyFileNotFoundHandler

@@ -4,6 +4,7 @@ services:
         arguments:
             - '@enhavo_routing.auto_generator'
             - '@enhavo_routing.factory.route'
+            - '@doctrine.orm.entity_manager'
 
     enhavo_routing.listener.routeable_listener:
         class: Enhavo\Bundle\RoutingBundle\EventListener\RouteableListener
@@ -25,3 +26,9 @@ services:
     Enhavo\Bundle\RoutingBundle\Twig\SlugifyExtension:
         tags:
             - { name: twig.extension }
+
+    Enhavo\Bundle\RoutingBundle\Vue\RoutingVueRouteProviderType:
+        arguments:
+            - '@enhavo_routing.repository.route'
+        tags:
+            - { name: enhavo_app.vue_route_provider }

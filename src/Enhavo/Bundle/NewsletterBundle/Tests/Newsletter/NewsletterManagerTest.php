@@ -11,7 +11,7 @@ namespace Enhavo\Bundle\NewsletterBundle\Tests\Newsletter;
 use Doctrine\ORM\EntityManagerInterface;
 use Enhavo\Bundle\AppBundle\Mailer\MailerManager;
 use Enhavo\Bundle\AppBundle\Mailer\Message;
-use Enhavo\Bundle\AppBundle\Template\TemplateManager;
+use Enhavo\Bundle\AppBundle\Template\TemplateResolver;
 use Enhavo\Bundle\AppBundle\Util\TokenGeneratorInterface;
 use Enhavo\Bundle\MediaBundle\Content\Content;
 use Enhavo\Bundle\MediaBundle\Entity\File;
@@ -48,8 +48,8 @@ class NewsletterManagerTest extends TestCase
         $dependency->parameterParser->method('parse')->willReturnCallback(function ($content) {
             return $content .'.parsed';
         });
-        $dependency->templateManager = $this->getMockBuilder(TemplateManager::class)->disableOriginalConstructor()->getMock();
-        $dependency->templateManager->method('getTemplate')->willReturnCallback(function ($key) {
+        $dependency->templateResolver = $this->getMockBuilder(TemplateResolver::class)->disableOriginalConstructor()->getMock();
+        $dependency->templateResolver->method('resolve')->willReturnCallback(function ($key) {
             return $key .'.managed';
         });
 
@@ -70,7 +70,7 @@ class NewsletterManagerTest extends TestCase
             $dependency->tokenGenerator,
             $dependency->logger,
             $dependency->twig,
-            $dependency->templateManager,
+            $dependency->templateResolver,
             $dependency->parameterParser,
             $dependency->provider,
             $dependency->from,
@@ -151,7 +151,7 @@ class NewsletterManagerTest extends TestCase
     {
         $dependency = $this->createDependencies();
         $dependency->mailerManager->method('createMessage')->willReturn(new Message());
-        $dependency->mailerManager->method('sendMessage')->willReturn(true);
+        $dependency->mailerManager->method('sendMessage');
         $newsletterManager = $this->createInstance($dependency, ['default' => [
             'template' => 'template.html.twig',
         ]]);
@@ -181,7 +181,6 @@ class NewsletterManagerTest extends TestCase
         $dependency->mailerManager->method('createMessage')->willReturn(new Message());
         $dependency->mailerManager->method('sendMessage')->willReturnCallback(function($message) use ($messageContainer) {
             $messageContainer->message = $message;
-            return true;
         });
         $newsletterManager = $this->createInstance($dependency, ['other' => [
             'template' => 'template.html.twig',
@@ -205,14 +204,14 @@ class NewsletterManagerTest extends TestCase
         $this->assertCount(1, $messageContainer->message->getAttachments());
         /** @var File $attachment */
         $attachment = $messageContainer->message->getAttachments()[0];
-        $this->assertEquals('attachmentContent', $attachment->getContent()->getContent());
+        $this->assertEquals('attachmentContent', $attachment->getFile()->getContent()->getContent());
     }
 
     public function testFinishSending()
     {
         $dependency = $this->createDependencies();
         $dependency->mailerManager->method('createMessage')->willReturn(new Message());
-        $dependency->mailerManager->method('sendMessage')->willReturn(true);
+        $dependency->mailerManager->method('sendMessage');
         $newsletterManager = $this->createInstance($dependency, ['default' => [
             'template' => 'template.html.twig',
         ]]);
@@ -282,7 +281,7 @@ class NewsletterManagerTest extends TestCase
     {
         $dependencies = $this->createDependencies();
         $dependencies->twig->method('render')->willReturnCallback(function ($template, $parameters) { return $template; });
-        $dependencies->templateManager->method('getTemplate')->willReturnCallback(function ($template) { return $template; });
+        $dependencies->templateResolver->method('resolve')->willReturnCallback(function ($template) { return $template; });
         $newsletterRenderer = $this->createInstance($dependencies, ['other' => [
             'template' => 'pathToOtherTemplate.twig',
             'label' => 'Other Template'
@@ -297,9 +296,6 @@ class NewsletterManagerTest extends TestCase
         $this->assertEquals('pathToOtherTemplate.twig.managed.rendered', $content);
     }
 
-    /**
-     *
-     */
     public function testWithoutTemplateKey()
     {
         $dependencies = $this->createDependencies();
@@ -338,14 +334,14 @@ class NewsletterManagerTest extends TestCase
         $dependency->mailerManager->method('createMessage')->willReturn(new Message());
         $dependency->mailerManager->method('sendMessage')->willReturnCallback(function($message) use ($messageContainer) {
             $messageContainer->message = $message;
-            return true;
+            return 1;
         });
         $newsletterManager = $this->createInstance($dependency, ['default' => [
             'template' => 'template.html.twig',
         ]]);
 
         $newsletter = $this->createDummyNewsletter();
-        $this->assertTrue($newsletterManager->sendTest($newsletter, 'peter@pan.de'));
+        $newsletterManager->sendTest($newsletter, 'peter@pan.de');
 
         $this->assertEquals('template.html.twig', $messageContainer->message->getTemplate());
         $this->assertEquals('from@enhavo.com', $messageContainer->message->getFrom());
@@ -369,14 +365,14 @@ class NewsletterManagerTest extends TestCase
         $dependency->mailerManager->method('createMessage')->willReturn(new Message());
         $dependency->mailerManager->method('sendMessage')->willReturnCallback(function($message) use ($messageContainer) {
             $messageContainer->message = $message;
-            return false;
+            return 0;
         });
         $newsletterManager = $this->createInstance($dependency, ['default' => [
             'template' => 'template.html.twig',
         ]]);
 
         $newsletter = $this->createDummyNewsletter();
-        $this->assertFalse($newsletterManager->sendTest($newsletter, 'peter@pan.de'));
+        $newsletterManager->sendTest($newsletter, 'peter@pan.de');
 
         $this->assertEquals('template.html.twig', $messageContainer->message->getTemplate());
         $this->assertEquals('from@enhavo.com', $messageContainer->message->getFrom());
@@ -402,8 +398,8 @@ class DependencyProvider
     public $logger;
     /** @var SubscriptionManager|MockObject */
     public $twig;
-    /** @var TemplateManager|MockObject */
-    public $templateManager;
+    /** @var TemplateResolver|MockObject */
+    public $templateResolver;
     /** @var ParameterParser|MockObject */
     public $parameterParser;
     /** @var ProviderInterface */

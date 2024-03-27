@@ -8,25 +8,63 @@
 
 namespace Enhavo\Bundle\ShopBundle\Controller;
 
+use Enhavo\Bundle\AppBundle\Resource\ResourceManager;
+use Enhavo\Bundle\AppBundle\Template\TemplateResolver;
+use Enhavo\Bundle\PaymentBundle\Model\PaymentInterface;
+use Enhavo\Bundle\ShopBundle\Entity\PaymentMethod;
 use Enhavo\Bundle\ShopBundle\Model\OrderInterface;
-use Payum\Core\Registry\RegistryInterface;
-use Payum\Core\Security\HttpRequestVerifierInterface;
-use Sylius\Component\Payment\Model\Payment;
-use Payum\Core\Security\GenericTokenFactoryInterface;
+use Sylius\Component\Resource\Repository\RepositoryInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 
-class PaymentController extends AppController
+class PaymentController extends AbstractController
 {
+    public function __construct(
+        private RepositoryInterface $orderRepository,
+        private ResourceManager $resourceManager,
+        private TemplateResolver $templateResolver,
+    )
+    {}
+
     public function purchaseAction(Request $request)
+    {
+        $order = $this->getOrder($request);
+        return $this->render($this->templateResolver->resolve('theme/shop/payment/purchase.html.twig'), [
+            'order' => $order
+        ]);
+    }
+
+    public function doPurchaseAction(Request $request)
+    {
+        $order = $this->getOrder($request);
+
+        /** @var PaymentInterface $payment */
+        $payment = $order->getLastPayment();
+
+        if ($payment === null) {
+            return $this->redirectToRoute('sylius_payment_theme_done', [
+                'tokenValue' => $payment->getToken()
+            ]);
+        }
+
+        if ($payment->getState() === PaymentInterface::STATE_CART) {
+            $this->resourceManager->update($payment, 'create', 'enhavo_payment');
+        }
+
+        return $this->redirectToRoute('sylius_payment_theme_authorize', [
+            'tokenValue' => $payment->getToken()
+        ]);
+    }
+
+    private function getOrder(Request $request): OrderInterface
     {
         $token = $request->get('token');
         if(empty($token)) {
             throw $this->createNotFoundException();
         }
 
-        $orderRepository = $this->get('sylius.repository.order');
         /** @var OrderInterface $order */
-        $order = $orderRepository->findOneBy([
+        $order = $this->orderRepository->findOneBy([
             'token' => $token
         ]);
 
@@ -34,73 +72,6 @@ class PaymentController extends AppController
             throw $this->createNotFoundException();
         }
 
-        $this->get('enhavo.order_processing.purchase_processor')->process($order);
-        $this->getDoctrine()->getManager()->flush();
-
-        $payment = $order->getPayment();
-
-        $captureToken = $this->getTokenFactory()->createCaptureToken(
-            $payment->getMethod()->getGateway(),
-            $payment,
-            'enhavo_shop_theme_payment_after'
-        );
-
-        return $this->redirect($captureToken->getTargetUrl());
-    }
-
-    public function afterAction(Request $request)
-    {
-        $configuration = $this->requestConfigurationFactory->createSimple($request);
-
-        $token = $this->getHttpRequestVerifier()->verify($request);
-        $this->getHttpRequestVerifier()->invalidate($token);
-
-        $status = new GetStatus($token);
-        $gatewayName = $token->getGatewayName();
-        $payum =  $this->getPayum();
-        $gateway = $payum->getGateway($gatewayName);
-        $gateway->execute($status);
-        $payment = $status->getFirstModel();
-        $order = $this->getOrderByPayment($payment);
-        $orderStateResolver = $this->get('enhavo.order.state_resolver');
-        $orderStateResolver->resolvePaymentState($order);
-
-        $this->getDoctrine()->getManager()->flush();
-        
-        return $this->render($configuration->getTemplate('EnhavoShopBundle:Theme/Payment:after.html.twig'), [
-            'order' => $order,
-            'status' => $status
-        ]);
-    }
-
-    /**
-     * @return RegistryInterface
-     */
-    protected function getPayum()
-    {
-        return $this->get('payum');
-    }
-
-    /**
-     * @return GenericTokenFactoryInterface
-     */
-    protected function getTokenFactory()
-    {
-        return $this->get('payum')->getTokenFactory();
-    }
-
-    /**
-     * @return HttpRequestVerifierInterface
-     */
-    protected function getHttpRequestVerifier()
-    {
-        return $this->get('payum')->getHttpRequestVerifier();
-    }
-
-    protected function getOrderByPayment(Payment $payment)
-    {
-        $orderRepository = $this->get('sylius.repository.order');
-        /** @var OrderInterface $order */
-        return $orderRepository->findByPaymentId($payment->getId());
+        return $order;
     }
 }

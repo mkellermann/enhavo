@@ -16,9 +16,15 @@ services:
     Enhavo\Bundle\AppBundle\Twig\TemplateExtension:
         arguments:
             - '%enhavo_app.form_themes%'
-            - '@enhavo_app.template.manager'
+            - '@Enhavo\Bundle\AppBundle\Template\TemplateResolverInterface'
         calls:
             - [ setContainer, ['@service_container']]
+        tags:
+            - { name: twig.extension }
+
+    Enhavo\Bundle\AppBundle\Twig\TwigExtension:
+        arguments:
+            - '@serializer'
         tags:
             - { name: twig.extension }
 
@@ -26,10 +32,16 @@ services:
         tags:
             - { name: twig.extension }
 
+    Enhavo\Bundle\AppBundle\Twig\RouterExtension:
+        arguments:
+            - '@Enhavo\Bundle\AppBundle\Twig\TwigRouter'
+        tags:
+            - { name: twig.extension }
+
     Enhavo\Bundle\AppBundle\Twig\WidgetExtension:
         arguments:
             - '@enhavo_app.widget.widget_manager'
-            - '@enhavo_app.template.manager'
+            - '@Enhavo\Bundle\AppBundle\Template\TemplateResolverInterface'
         calls:
             - [ setContainer, ['@service_container']]
         tags:
@@ -46,3 +58,7 @@ services:
             - '@enhavo_app.locale_resolver'
         tags:
             - { name: twig.extension }
+
+    Enhavo\Bundle\AppBundle\Twig\TwigRouter:
+        arguments:
+            - '@request_stack'

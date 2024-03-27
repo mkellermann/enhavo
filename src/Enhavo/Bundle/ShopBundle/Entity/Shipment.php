@@ -10,28 +10,19 @@ namespace Enhavo\Bundle\ShopBundle\Entity;
 
 use Enhavo\Bundle\ShopBundle\Model\OrderInterface;
 use Enhavo\Bundle\ShopBundle\Model\ShipmentInterface;
+use Sylius\Component\Core\Model\AdjustmentInterface;
 use Sylius\Component\Shipping\Model\Shipment as SyliusShipment;
 
 class Shipment extends SyliusShipment implements ShipmentInterface
 {
-    /**
-     * @var OrderInterface
-     */
-    private $order;
+    private ?OrderInterface $order = null;
 
-    /**
-     * @return OrderInterface
-     */
-    public function getOrder()
+    public function getOrder(): ?OrderInterface
     {
         return $this->order;
     }
 
-    /**
-     * @param OrderInterface $order
-     * @return void
-     */
-    public function setOrder(OrderInterface $order)
+    public function setOrder(?OrderInterface $order)
     {
         $this->order = $order;
     }

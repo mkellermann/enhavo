@@ -3,13 +3,19 @@
 
 namespace Enhavo\Bundle\AppBundle\Tests\Resource;
 
-
 use Doctrine\ORM\EntityManagerInterface;
-use Enhavo\Bundle\AppBundle\Batch\Type\DeleteBatchType;
+use Enhavo\Bundle\AppBundle\Event\ResourceEvent;
+use Enhavo\Bundle\AppBundle\Event\ResourceEvents;
 use Enhavo\Bundle\AppBundle\Resource\ResourceManager;
+use Enhavo\Bundle\AppBundle\Tests\Mock\ContainerMock;
+use Enhavo\Bundle\AppBundle\Tests\Mock\EntityMock;
+use Enhavo\Bundle\AppBundle\Tests\Mock\EntityRepositoryMock;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use Sylius\Bundle\ResourceBundle\Event\ResourceControllerEvent;
+use SM\Factory\FactoryInterface;
+use Sylius\Component\Resource\Metadata\RegistryInterface;
+use Sylius\Component\Resource\Repository\RepositoryInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 class ResourceManagerTest extends TestCase
@@ -19,61 +25,92 @@ class ResourceManagerTest extends TestCase
         $dependencies = new ResourceManagerTestDependencies();
         $dependencies->eventDispatcher = $this->getMockBuilder(EventDispatcherInterface::class)->getMock();
         $dependencies->em = $this->getMockBuilder(EntityManagerInterface::class)->getMock();
+        $dependencies->registry = $this->getMockBuilder(RegistryInterface::class)->getMock();
+        $dependencies->stateMachineFactory = $this->getMockBuilder(FactoryInterface::class)->getMock();
+        $dependencies->container = new ContainerMock();
+        $dependencies->repository = new EntityRepositoryMock();
         return $dependencies;
     }
 
     private function createInstance(ResourceManagerTestDependencies $dependencies)
     {
-        $type = new ResourceManager($dependencies->eventDispatcher, $dependencies->em);
-        return $type;
+        $manager = new ResourceManager($dependencies->eventDispatcher, $dependencies->em, $dependencies->registry, $dependencies->stateMachineFactory);
+        $manager->setContainer($dependencies->container);
+        return $manager;
     }
 
-    public function testDelete()
+    public function testDeleteEvents()
     {
+        $expectedEvents = [
+            ResourceEvents::PRE_DELETE,
+            ResourceEvents::POST_DELETE,
+        ];
+
         $dependencies = $this->createDependencies();
         $dependencies->em->expects($this->exactly(1))->method('remove');
         $dependencies->em->expects($this->once())->method('flush');
-        $dependencies->eventDispatcher->expects($this->exactly(2))->method('dispatch')->willReturnCallback(function ($message, $event) {
-            $this->assertRegExp('/enhavo_app\.(pre|post)_delete/', $message);
-            $this->assertInstanceOf(ResourceControllerEvent::class, $event);
+        $dependencies->eventDispatcher->method('dispatch')->willReturnCallback(function ($event, $eventName) use (&$expectedEvents) {
+            $expectedEventName = array_shift($expectedEvents);
+            $this->assertEquals($expectedEventName, $eventName);
+            $this->assertInstanceOf(ResourceEvent::class, $event);
+            return $event;
         });
         $manager = $this->createInstance($dependencies);
 
-        $manager->delete(new \stdClass());
+        $manager->delete(new EntityMock());
     }
 
-    public function testCreate()
+    public function testCreateEvents()
     {
-        $dependencies = $this->createDependencies();
-        $dependencies->em->expects($this->exactly(1))->method('persist');
-        $dependencies->em->expects($this->once())->method('flush');
-        $dependencies->eventDispatcher->expects($this->exactly(2))->method('dispatch')->willReturnCallback(function ($message, $event) {
-            $this->assertRegExp('/enhavo_app\.(pre|post)_create/', $message);
-            $this->assertInstanceOf(ResourceControllerEvent::class, $event);
-        });
-        $manager = $this->createInstance($dependencies);
+        $expectedEvents = [
+            ResourceEvents::PRE_CREATE,
+            ResourceEvents::POST_CREATE,
+        ];
 
-        $manager->create(new \stdClass());
+        $dependencies = $this->createDependencies();
+        $dependencies->eventDispatcher->method('dispatch')->willReturnCallback(function ($event, $eventName) use (&$expectedEvents) {
+            $expectedEventName = array_shift($expectedEvents);
+            $this->assertEquals($expectedEventName, $eventName);
+            return $event;
+        });
+        $dependencies->em->method('getRepository')->willReturn($dependencies->repository);
+        $called = false;
+        $dependencies->repository->add = function () use (&$called){
+            $called = true;
+        };
+
+        $manager = $this->createInstance($dependencies);
+        $manager->create(new EntityMock());
+        $this->assertTrue($called);
     }
 
-    public function testUpdate()
+    public function testUpdateEvents()
     {
+        $expectedEvents = [
+            ResourceEvents::PRE_UPDATE,
+            ResourceEvents::POST_UPDATE,
+        ];
+
         $dependencies = $this->createDependencies();
         $dependencies->em->expects($this->once())->method('flush');
-        $dependencies->eventDispatcher->expects($this->exactly(2))->method('dispatch')->willReturnCallback(function ($message, $event) {
-            $this->assertRegExp('/enhavo_app\.(pre|post)_update/', $message);
-            $this->assertInstanceOf(ResourceControllerEvent::class, $event);
+        $dependencies->eventDispatcher->method('dispatch')->willReturnCallback(function ($event, $eventName) use (&$expectedEvents) {
+            $expectedEventName = array_shift($expectedEvents);
+            $this->assertEquals($expectedEventName, $eventName);
+            $this->assertInstanceOf(ResourceEvent::class, $event);
+            return $event;
         });
         $manager = $this->createInstance($dependencies);
 
-        $manager->update(new \stdClass());
+        $manager->update(new EntityMock());
     }
 }
 
 class ResourceManagerTestDependencies
 {
-    /** @var EventDispatcherInterface|MockObject */
-    public $eventDispatcher;
-    /** @var EntityManagerInterface|MockObject */
-    public $em;
+    public EventDispatcherInterface|MockObject $eventDispatcher;
+    public EntityManagerInterface|MockObject $em;
+    public RegistryInterface|MockObject $registry;
+    public FactoryInterface|MockObject $stateMachineFactory;
+    public ContainerInterface|MockObject $container;
+    public RepositoryInterface|MockObject $repository;
 }

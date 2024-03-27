@@ -1,2 +1,11 @@
 enhavo_media:
     cropping: 'Zuschneiden'
+    upload:
+        fail:
+            message: 'Upload fehlgeschlagen. Vielleicht ist die Datei zu groß.'
+    image_cropper:
+        message:
+            not_saved: 'Ohne Speichern schließen?'
+        label:
+            cancel: 'Abbruch'
+            close: 'Schließen'
