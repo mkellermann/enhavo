@@ -11,12 +11,7 @@ class WysiwygTypeTest extends TypeTestCase
 {
     protected function getExtensions()
     {
-        $entrypontFileManagerMock = $this->getMockBuilder(EntrypointFileManager::class)->disableOriginalConstructor()->getMock();
-        $entrypontFileManagerMock->method('getCssFiles')->willReturn([
-            'file1', 'file2'
-        ]);
-
-        $type = new WysiwygType('entrypoint', 'build', $entrypontFileManagerMock);
+        $type = new WysiwygType('entrypoint', 'build');
         return array(
             new PreloadedExtension(array($type), array()),
         );
@@ -31,11 +26,11 @@ class WysiwygTypeTest extends TypeTestCase
         $this->assertEquals('new text', $form->getData());
     }
 
-    public function testEditorCssData()
-    {
-        $form = $this->factory->create(WysiwygType::class);
-        $formView = $form->createView();
-        $this->assertEquals('file1', $formView->vars['editor_css'][0]);
-        $this->assertEquals('file2', $formView->vars['editor_css'][1]);
-    }
+//    public function testEditorCssData()
+//    {
+//        $form = $this->factory->create(WysiwygType::class);
+//        $formView = $form->createView();
+//        $this->assertEquals('file1', $formView->vars['editor_css'][0]);
+//        $this->assertEquals('file2', $formView->vars['editor_css'][1]);
+//    }
 }

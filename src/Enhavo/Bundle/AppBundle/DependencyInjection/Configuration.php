@@ -26,10 +26,10 @@ class Configuration implements ConfigurationInterface
 
         $this->addViewerSectionSection($rootNode);
         $this->addVueSection($rootNode);
+        $this->addViteSection($rootNode);
         $this->addAreaSection($rootNode);
         $this->addEndpointSection($rootNode);
         $this->addMailSectionSection($rootNode);
-        $this->addWebpackBuildSection($rootNode);
         $this->addFormThemesSection($rootNode);
         $this->addTemplatePathsSection($rootNode);
         $this->addLoginSection($rootNode);
@@ -156,15 +156,6 @@ class Configuration implements ConfigurationInterface
         ;
     }
 
-    private function addWebpackBuildSection(ArrayNodeDefinition $node)
-    {
-        $node
-            ->children()
-                ->scalarNode('webpack_build')->defaultValue('_default')->end()
-            ->end()
-        ;
-    }
-
     private function addFormThemesSection(ArrayNodeDefinition $node)
     {
         $node
@@ -274,6 +265,29 @@ class Configuration implements ConfigurationInterface
                             ->scalarNode('label')->defaultValue('')->end()
                             ->scalarNode('translation_domain')->defaultValue(null)->end()
                             ->scalarNode('display')->defaultValue(true)->end()
+                        ->end()
+                    ->end()
+                ->end()
+            ->end();
+    }
+
+    private function addViteSection(ArrayNodeDefinition $node)
+    {
+        $node
+            ->children()
+                ->arrayNode('vite')
+                    ->children()
+                        ->scalarNode('mode')->defaultValue('test')->end()
+                        ->arrayNode('builds')
+                            ->useAttributeAsKey('name')
+                            ->arrayPrototype()
+                                ->children()
+                                    ->scalarNode('host')->defaultValue('localhost')->end()
+                                    ->scalarNode('port')->defaultValue('5200')->end()
+                                    ->scalarNode('manifest')->end()
+                                    ->scalarNode('base')->end()
+                                ->end()
+                            ->end()
                         ->end()
                     ->end()
                 ->end()

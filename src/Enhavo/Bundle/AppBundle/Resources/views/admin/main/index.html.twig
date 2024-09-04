@@ -8,7 +8,7 @@
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}" />
     <script id="data" type="application/json">{{ data|json_encode|raw }}</script>
     {% block stylesheets %}
-        {{ encore_entry_link_tags('enhavo/application', null, 'enhavo') }}
+        {{ vite_css_tags('entrypoints/application.js', 'admin') }}
     {% endblock %}
 </head>
 
@@ -16,13 +16,14 @@
     <div id="app"
          data-controller="application"
          data-application-application-value="@enhavo/app/main/MainApp"
-         data-application-component-value="@enhavo/app/main/components/MainComponent.vue"
+         data-application-component-value="@enhavo/app/components/main/MainComponent.vue"
     ></div>
     <script id="routes" type="application/json">{{ routes|raw }}</script>
     <script id="translations" type="application/json">{{ translations|json_encode|raw }}</script>
 
     {% block javascripts %}
-        {{ encore_entry_script_tags('enhavo/application', null, 'enhavo') }}
+        {{ vite_js_tags('entrypoints/application.js', 'admin') }}
+        {{ vite_js_preload_tags('entrypoints/application.js', 'admin') }}
     {% endblock %}
 </body>
 </html>

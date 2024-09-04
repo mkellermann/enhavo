@@ -10,6 +10,7 @@ namespace App\Endpoint;
 
 use App\Form\RegisterForm;
 use Enhavo\Bundle\ApiBundle\Endpoint\AbstractEndpointType;
+use Symfony\Component\Routing\Attribute\Route;
 
 #[Route(path: '/register', name: 'app_register', defaults: ['_format' => 'html'])]
 #[Route(path: '/api/register', defaults: ['_format' => 'json'])]
@@ -54,7 +55,7 @@ But in your template you may want to show a navigation, or want to pass translat
     }
 ```
 
-So the navigation and translation data will also be passed in the request, that's what we want, right?
+So the navigation and translation data will also be passed in the template, that's what we want, right?
 Not exactly, the problem is, that our api will also serve the navigation and translation data.
 
 ```json
@@ -65,27 +66,27 @@ Not exactly, the problem is, that our api will also serve the navigation and tra
 }
 ```
 
-We only want to turn on the navigation and translation option if we are on `/register` but not on `/api/register`.
-That's where areas are coming in. An area define a set of urls, where we can change the behaviour of your endpoints.
-This means we are not only restricted to options, but this is the most common use case.
+We only want to use the navigation and translation option if we are on `/register` but not on `/api/register`.
+That's where areas are coming into. An area define a set of urls, where we can change the option of your endpoints.
+
 
 ## Configure areas
 
 Areas applies on urls. With the `path` option you can add any url or use regex. It is also possible to pass an array of urls.
 With `firewall` you can also refer a security firewall to avoid same url configuration on different places. 
 The `firewall` and `path` configuration can be combined as well. The first area that matches will be applied.
-The `endpoint` settings are the predefined options when an endpoint is used. 
+The `options` settings are the predefined options when an endpoint is used. 
 
 ```yaml
 enhavo_app:
     area:
         api: # name of the area
             path: '^/api/.*'
-            endpoint:
+            options:
                 format: 'json'
         theme:
             firewall: main
-            endpoint:
+            options:
                 navigation: ['theme', 'endpoint']
                 routes: ['theme']
                 vue_routes: ['theme']
@@ -97,7 +98,7 @@ enhavo_app:
               - '^/admin/api/.*'
 ```
 
-::: tip
+::: warning Note
 If an option is set in a route, then the area configuration will not overwrite that specific option.
 :::
 

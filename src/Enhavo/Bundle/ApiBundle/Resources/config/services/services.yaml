@@ -6,6 +6,7 @@ services:
             - [setContainer, ['@Psr\Container\ContainerInterface']]
         tags:
             - { name: controller.service_arguments }
+            - { name: container.service_subscriber }
 
     Enhavo\Bundle\ApiBundle\EventListener\EndpointRouteListener:
         arguments:
@@ -45,3 +46,7 @@ services:
             - 'Enhavo\Bundle\ApiBundle\Endpoint\Endpoint'
             - '@Enhavo\Component\Type\RegistryInterface[Endpoint]'
             - '@Enhavo\Bundle\ApiBundle\Profiler\EndpointDataCollector'
+
+    Enhavo\Bundle\ApiBundle\Twig\ApiProfilerExtension:
+        tags:
+            - { name: twig.extension }

@@ -41,18 +41,19 @@ class IndexRepository extends EntityRepository
     {
         $query = $this->createQueryBuilder('i');
         $query->select(
-            'min(d.contentId) AS id',
-            'min(d.contentClass) AS class',
+            'd.contentId AS id',
+            'd.contentClass AS class',
             'sum(i.score * t.count) AS calculated_score',
             'min(f.value) AS value',
-            'min(f.key) AS key'
+            'min(f.key) AS key',
+            'd.id AS dataset_id'
         );
 
         $query->innerJoin(Total::class, 't', 'WITH', 'i.word = t.word');
         $query->innerJoin(DataSet::class, 'd', 'WITH', 'i.dataSet = d');
         $query->leftJoin('d.filters', 'f');
 
-        $query->groupBy('d.contentId');
+        $query->groupBy('d.id');
 
         $i = 0;
         foreach($filter->getWords() as  $word) {
@@ -81,6 +82,57 @@ class IndexRepository extends EntityRepository
 
         if($filter->getLimit() !== null) {
             $query->setMaxResults(intval($filter->getLimit()));
+        }
+
+        return $query;
+    }
+
+    public function countSearchResults(SearchFilter $filter)
+    {
+        $query = $this->createCountQuery($filter);
+        $result = $query->getQuery()->getResult();
+
+        if (isset($result[0]) && isset($result[0]['result_count'])) {
+            return $result[0]['result_count'];
+        }
+        return 0;
+    }
+
+    /**
+     * @param SearchFilter $filter
+     * @return \Doctrine\ORM\QueryBuilder
+     */
+    public function createCountQuery(SearchFilter $filter)
+    {
+        $query = $this->createQueryBuilder('i');
+        $query->select(
+            'count(distinct(d.id)) AS result_count',
+        );
+
+        $query->innerJoin(Total::class, 't', 'WITH', 'i.word = t.word');
+        $query->innerJoin(DataSet::class, 'd', 'WITH', 'i.dataSet = d');
+        $query->leftJoin('d.filters', 'f');
+
+        $i = 0;
+        foreach($filter->getWords() as  $word) {
+            $query->orWhere('i.word = :word_'.$i);
+            $query->setParameter('word_'.$i, $word);
+            $i++;
+        }
+
+        if($filter->getQueries()) {
+            $i = 0;
+            foreach($filter->getQueries() as $key => $filerQuery) {
+                $ids = $this->createFilterIds($key, $filerQuery);
+                $query->andWhere(sprintf('d.id IN (:filterIds_%s)', $i));
+                $query->setParameter(sprintf('filterIds_%s', $i), $ids);
+                $i++;
+            }
+        };
+
+        if($filter->getOrderBy()) {
+            $query->andWhere('f.key = :orderKey');
+            $query->setParameter('orderKey', $filter->getOrderBy());
         }
 
         return $query;
